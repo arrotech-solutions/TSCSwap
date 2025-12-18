@@ -61,18 +61,27 @@
 
     <div style="background: #1e293b; border-radius: 8px; padding: 20px; margin-bottom: 20px; position: relative;">
         {% if not is_owner and user.is_authenticated and not swap.archived %}
-        <div style="position: absolute; top: 20px; right: 20px;">
-            {% if has_requested %}
-                <button class="bg-gray-500 text-white px-4 py-2 rounded-md font-medium cursor-not-allowed" disabled>
-                    Request Sent
-                </button>
-            {% else %}
-                <form method="post" action="{% url 'home:request_swap' swap.id %}" style="display: inline;">
-                    {% csrf_token %}
-                    <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md font-medium transition duration-300">
-                        Request Swap
+        <div style="position: absolute; top: 20px; right: 20px; display: flex; gap: 10px;">
+            {% if has_active_subscription %}
+                {% if has_requested %}
+                    <button class="bg-gray-500 text-white px-4 py-2 rounded-md font-medium cursor-not-allowed" disabled>
+                        Request Sent
                     </button>
-                </form>
+                {% else %}
+                    <form method="post" action="{% url 'home:request_swap' swap.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" class="bg-teal-600 hover:bg-teal-700 text-white px-4 py-2 rounded-md font-medium transition duration-300">
+                            Request Swap
+                        </button>
+                    </form>
+                {% endif %}
+            {% else %}
+                <a href="{% url 'payments:subscription' %}" class="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-md font-medium transition duration-300 flex items-center">
+                    <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v2h8z" />
+                    </svg>
+                    Subscribe to Request Swap
+                </a>
             {% endif %}
         </div>
         {% endif %}
@@ -133,14 +142,21 @@
                 <p style="margin: 0 0 5px 0; color: #94a3b8; font-size: 14px;">Phone</p>
                 <p style="margin: 0; color: #e2e8f0; font-weight: 500;">
                     {% if user_profile.phone_number and user_profile.phone_number != 'Not provided' %}
-                        <a href="tel:{{ user_profile.phone_number }}" style="color: #60a5fa; text-decoration: none;" class="flex items-center">
-                            <span id="phone-number">{{ user_profile.phone_number|mask_phone }}</span>
-                            <button onclick="copyToClipboard('{{ user_profile.phone_number }}')" class="ml-2 p-1 rounded hover:bg-gray-700" title="Copy phone number">
-                                <svg class="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
-                                </svg>
-                            </button>
-                        </a>
+                        {% if has_active_subscription or is_owner %}
+                            <a href="tel:{{ user_profile.phone_number }}" style="color: #60a5fa; text-decoration: none;" class="flex items-center">
+                                <span id="phone-number">{{ user_profile.phone_number|default:''|mask_phone }}</span>
+                                <button onclick="copyToClipboard('{{ user_profile.phone_number }}')" class="ml-2 p-1 rounded hover:bg-gray-700" title="Copy phone number">
+                                    <svg class="w-4 h-4 text-gray-400 hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path>
+                                    </svg>
+                                </button>
+                            </a>
+                        {% else %}
+                            <div class="flex items-center">
+                                <span id="phone-number">{{ user_profile.phone_number }}</span>
+                                <span class="ml-2 text-yellow-400 text-sm">(Subscribe to view full number)</span>
+                            </div>
+                        {% endif %}
                     {% else %}
                         <span class="text-gray-400">Not provided</span>
                     {% endif %}

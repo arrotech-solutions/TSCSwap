@@ -317,6 +317,17 @@ def dashboard(request):
     # Overall profile complete if all sections are complete
     profile_complete = all([personal_info_complete, teaching_info_complete, profile_picture_complete])
     
+    # Get subscription status
+    subscription = getattr(user, 'my_subscription', None)
+    has_active_subscription = subscription.is_active if subscription else False
+    subscription_status = {
+        'has_subscription': subscription is not None,
+        'is_active': has_active_subscription,
+        'type': subscription.sub_type if subscription else 'None',
+        'expiry_date': subscription.expiry_date.strftime('%B %d, %Y') if subscription and subscription.expiry_date else 'N/A',
+        'days_remaining': subscription.days_remaining if subscription else 0,
+    }
+    
     context = {
         'user': user,
         'active_swaps': active_swaps_count,
@@ -327,6 +338,7 @@ def dashboard(request):
         'personal_info_complete': personal_info_complete,
         'teaching_info_complete': teaching_info_complete,
         'profile_picture_complete': profile_picture_complete,
+        'subscription': subscription_status,
     }
     
     return render(request, 'users/dashboard.html', context)

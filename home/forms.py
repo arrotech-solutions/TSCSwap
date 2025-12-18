@@ -14,6 +14,12 @@ class MySubjectForm(forms.ModelForm):
         # Filter subjects by user's level if available, otherwise show all
         if user_level:
             self.fields['subject'].queryset = Subject.objects.filter(level=user_level).order_by('name')
+            
+            # Get user's current subjects and set initial values
+            current_subjects = Subject.objects.filter(
+                mysubject__user=user
+            ).values_list('id', flat=True)
+            self.initial['subject'] = list(current_subjects)
         else:
             self.fields['subject'].queryset = Subject.objects.all().order_by('name')
     

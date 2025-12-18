@@ -3,10 +3,13 @@ from django.shortcuts import render, get_object_or_404, redirect, HttpResponseRe
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.urls import reverse
-from django.http import HttpResponseForbidden, JsonResponse, HttpResponse, JsonResponse
+from django.http import HttpResponseForbidden, JsonResponse, HttpResponse
 
 from .forms import MySubjectForm, SwapForm, SchoolForm
-from .models import MySubject, Subject, Swaps, User, SwapRequests, Counties, Constituencies, Wards, Schools
+from .models import (
+    Level, MySubject, Subject, Swaps, User, 
+    SwapRequests, Counties, Constituencies, Wards, Schools
+)
 
 
 def landing_page(request):
@@ -124,46 +127,72 @@ def all_schools(request):
 @login_required
 def create_mysubject(request):
     """
-    Simple form to create a MySubject entry and associate subjects with a user.
-    Only shows subjects if user has set their education level in their profile.
+    View to handle subject selection for a user.
+    Filters subjects based on user's education level.
     """
     user = request.user
-    form = None
     success = False
     current_subjects = Subject.objects.none()
     display_name = None
     user_level = None
-    has_level_set = False
+    level_form = None
 
-    if user:
-        current_subjects = Subject.objects.filter(mysubject__user=user).distinct()
-        # Get user's profile and display name
-        profile = getattr(user, "profile", None)
-        if profile:
-            if profile.first_name or profile.last_name:
-                first = profile.first_name or ""
-                last = profile.last_name or ""
-                display_name = f"{first} {last}".strip()
-            # Get user's education level for display
-            if hasattr(profile, 'level') and profile.level:
-                user_level = profile.level.name
-                has_level_set = True
-                # Only initialize form if user has set their education level
-                form = MySubjectForm(request.POST or None, user=user)
+    # Get user's profile and level
+    profile = getattr(user, "profile", None)
+    
+    # Handle level form submission
+    if request.method == "POST" and 'set_level' in request.POST:
+        if not profile:
+            from users.models import Profile
+            profile = Profile.objects.create(user=user)
         
-        if not display_name:
-            display_name = user.email
+        level_id = request.POST.get('level')
+        if level_id:
+            try:
+                level = Level.objects.get(id=level_id)
+                profile.level = level
+                profile.save()
+                messages.success(request, "Your teaching level has been updated successfully!")
+                return redirect('home:create_mysubject')
+            except Level.DoesNotExist:
+                messages.error(request, "Invalid level selected.")
+    
+    # Get user's current level if exists
+    if profile and hasattr(profile, 'level') and profile.level:
+        user_level = profile.level
+    
+    # Set display name
+    if profile and (profile.first_name or profile.last_name):
+        display_name = f"{profile.first_name or ''} {profile.last_name or ''}".strip()
+    else:
+        display_name = user.email
+    
+    # Initialize forms
+    form = MySubjectForm(request.POST or None, user=user) if user_level else None
+    
+    # Get current user's subjects if level is set
+    if user_level:
+        current_subjects = Subject.objects.filter(
+            mysubject__user=user
+        ).distinct()
+    
+    # Handle subject form submission
+    if request.method == "POST" and form and form.is_valid():
+        # Get selected subjects
+        selected_subjects = form.cleaned_data.get('subject', [])
+        
+        # Get or create the user's MySubject record
+        my_subject, created = MySubject.objects.get_or_create(user=user)
+        
+        # Update the many-to-many relationship using set()
+        my_subject.subject.set(selected_subjects)
+        
+        messages.success(request, "Your subjects have been updated successfully!")
+        return redirect('home:create_mysubject')
 
-    if request.method == "POST":
-        if form.is_valid():
-            my_subject = form.save(commit=False)
-            my_subject.user = user
-            my_subject.save()
-            form.save_m2m()
-            success = True
-            current_subjects = Subject.objects.filter(mysubject__user=user).distinct()
-            form = MySubjectForm(user=user)  # Reset form with user for another entry
-
+    # Get all available levels for the level selection dropdown
+    levels = Level.objects.all().order_by('name')
+    
     return render(
         request,
         "home/mysubject_form.html",
@@ -173,6 +202,8 @@ def create_mysubject(request):
             "current_subjects": current_subjects,
             "user": user,
             "display_name": display_name,
+            "user_level": user_level,
+            "levels": levels,  # Add levels to the context
         },
     )
 
@@ -317,15 +348,23 @@ def swap_detail(request, swap_id):
     # Check if the current user is the owner of the swap
     is_owner = (user.is_authenticated and user == swap.user)
     
+    # Check if the current user has an active subscription
+    has_active_subscription = False
+    if user.is_authenticated and hasattr(user, 'my_subscription'):
+        has_active_subscription = user.my_subscription.is_active  # Remove parentheses as it's a property
+    
     # Get the user's profile information if available
     user_profile = None
     if swap.user and hasattr(swap.user, 'profile'):
         phone_number = getattr(swap.user.profile, 'phone', None) or getattr(swap.user.profile, 'phone_number', None)
+        # Mask phone number if viewer doesn't have an active subscription and is not the owner
+        display_phone = str(phone_number) if (is_owner or has_active_subscription) else None
         user_profile = {
             'first_name': getattr(swap.user.profile, 'first_name', 'Not provided') or 'Not provided',
             'last_name': getattr(swap.user.profile, 'last_name', 'Not provided') or 'Not provided',
-            'phone_number': str(phone_number) if phone_number else 'Not provided',
+            'phone_number': display_phone if display_phone else (f'******{str(phone_number)[-4:]}' if phone_number else 'Not provided'),
             'tsc_number': getattr(swap.user.profile, 'tsc_number', 'Not provided') or 'Not provided',
+            'show_contact': is_owner or has_active_subscription
         }
     
     # Check if the current user has already requested this swap
@@ -344,6 +383,7 @@ def swap_detail(request, swap_id):
         'user_profile': user_profile,
         'has_requested': has_requested,
         'swap_requests': swap_requests,
+        'has_active_subscription': has_active_subscription,
     }
     
     return render(request, 'home/swap_detail.html', context)
@@ -489,8 +529,8 @@ def my_swap_requests(request):
     Display all swap requests made by the current user.
     """
     user = request.user
-    sent_requests = SwapRequests.objects.filter(requester=user).select_related('swap', 'swap__user').order_by('-created_at')
-    received_requests = SwapRequests.objects.filter(swap__user=user).select_related('swap', 'requester').order_by('-created_at')
+    sent_requests = SwapRequests.objects.filter(user=request.user).select_related('swap', 'swap__user').order_by('-created_at')
+    received_requests = SwapRequests.objects.filter(swap__user=user).select_related('swap', 'user').order_by('-created_at')
     
     context = {
         'sent_requests': sent_requests,

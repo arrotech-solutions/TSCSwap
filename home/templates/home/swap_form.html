@@ -1,0 +1,224 @@
+{% extends "users/base.html" %}
+
+{% block title %}Start a Swap · TSC Swap{% endblock %}
+
+{% block extra_css %}
+<style>
+    body, main {
+        background: #030711;
+        color: #e5e7eb;
+    }
+    .swap-input {
+        width: 100%;
+        padding: 8px 10px;
+        border-radius: 8px;
+        border: 1px solid rgba(148, 163, 184, 0.5);
+        background-color: #020617;
+        color: #e5e7eb;
+    }
+    .swap-input:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.7);
+    }
+    .field-help {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-top: 2px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="page" style="max-width: 640px; margin: 16px auto 0; padding: 20px 22px; background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px;">
+        <h1 style="margin-top: 0; font-size: 22px;">Start a swap</h1>
+
+        <p style="color: #9ca3af; margin: 6px 0 14px 0;">
+            You are creating a swap request for
+            <strong>{{ display_name }}</strong>.
+        </p>
+
+        {% if success %}
+            <div style="padding: 10px 12px; border-radius: 8px; background: rgba(22, 163, 74, 0.2); border: 1px solid rgba(22, 163, 74, 0.4); color: #bbf7d0; margin-bottom: 12px;">
+                Swap saved. You can adjust details later from your dashboard.
+            </div>
+        {% endif %}
+
+        {% if form.non_field_errors %}
+            <div style="padding: 8px 10px; border-radius: 8px; background: rgba(248, 113, 113, 0.1); border: 1px solid rgba(248, 113, 113, 0.6); color: #fecaca; margin-bottom: 12px;">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        <form method="post" style="display: flex; flex-direction: column; gap: 16px;">
+            {% csrf_token %}
+
+            <div>
+                <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred school gender</label>
+                {{ form.gender }}
+                {% if form.gender.errors %}
+                    <div style="color:#fecaca; font-size:12px; margin-top:2px;">{{ form.gender.errors|striptags }}</div>
+                {% else %}
+                    <p class="field-help">Choose the gender mix of your ideal school (or "All" if flexible).</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label style="font-weight: 600; margin-bottom: 6px; display: block;">Preferred boarding type</label>
+                {{ form.boarding }}
+                {% if form.boarding.errors %}
+                    <div style="color:#fecaca; font-size:12px; margin-top:2px;">{{ form.boarding.errors|striptags }}</div>
+                {% else %}
+                    <p class="field-help">Day, boarding, mixed, or "All" if you’re open to any.</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label style="font-weight: 600; margin-bottom: 6px; display: block;">{{ form.county.label }}</label>
+                {{ form.county }}
+                {% if form.county.errors %}
+                    <div style="color:#fecaca; font-size:12px; margin-top:2px;">{{ form.county.errors|striptags }}</div>
+                {% else %}
+                    <p class="field-help">Required - Select the county you'd like to move to.</p>
+                {% endif %}
+            </div>
+
+            <div>
+                <label style="font-weight: 600; margin-bottom: 6px; display: block;">Target constituency (optional)</label>
+                {{ form.constituency }}
+                <p class="field-help">Optional - Select a county first to see available constituencies</p>
+            </div>
+
+            <div>
+                <label style="font-weight: 600; margin-bottom: 6px; display: block;">Target ward (optional)</label>
+                {{ form.ward }}
+                <p class="field-help">Optional - Select a constituency first to see available wards</p>
+            </div>
+
+            <button style="padding: 10px 14px; border: none; border-radius: 8px; background: #2563eb; color: #e5e7eb; font-weight: 600; cursor: pointer;" type="submit">
+                Save swap
+            </button>
+        </form>
+
+        <script>
+            // Get the form elements
+            const countySelect = document.getElementById('id_county');
+            const constituencySelect = document.getElementById('id_constituency');
+            const wardSelect = document.getElementById('id_ward');
+
+            // Function to fetch and populate dropdown
+            function populateDropdown(url, targetSelect) {
+                const csrftoken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+                
+                return fetch(url, {
+                    headers: {
+                        'X-CSRFToken': csrftoken
+                    }
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Clear existing options
+                    targetSelect.innerHTML = '<option value="">---------</option>';
+                    
+                    // Add new options
+                    data.forEach(item => {
+                        const option = document.createElement('option');
+                        option.value = item.id;
+                        option.textContent = item.name;
+                        targetSelect.appendChild(option);
+                    });
+                    targetSelect.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error in populateDropdown:', error);
+                    targetSelect.innerHTML = '<option value="">Error loading data</option>';
+                });
+            }
+
+            // County change handler
+            if (countySelect) {
+                countySelect.addEventListener('change', function() {
+                    const countyId = this.value;
+                    if (countyId) {
+                        // Clear and disable dependent fields
+                        constituencySelect.innerHTML = '<option value="">Loading...</option>';
+                        wardSelect.innerHTML = '<option value="">Select constituency first</option>';
+                        wardSelect.disabled = true;
+                        constituencySelect.disabled = true;
+                        
+                        // Fetch and populate constituencies
+                        populateDropdown(`/api/constituencies/?county=${countyId}`, constituencySelect)
+                            .then(() => {
+                                constituencySelect.disabled = false;
+                            });
+                    } else {
+                        // Reset if no county is selected
+                        constituencySelect.innerHTML = '<option value="">Select a county first</option>';
+                        wardSelect.innerHTML = '<option value="">Select constituency first</option>';
+                        constituencySelect.disabled = true;
+                        wardSelect.disabled = true;
+                    }
+                });
+            }
+
+            // Constituency change handler
+            if (constituencySelect) {
+                constituencySelect.addEventListener('change', function() {
+                    const constituencyId = this.value;
+                    if (constituencyId) {
+                        // Clear and disable ward field
+                        wardSelect.innerHTML = '<option value="">Loading...</option>';
+                        wardSelect.disabled = true;
+                        
+                        // Fetch and populate wards
+                        populateDropdown(`/api/wards/?constituency=${constituencyId}`, wardSelect)
+                            .then(() => {
+                                wardSelect.disabled = false;
+                            });
+                    } else {
+                        // Reset if no constituency is selected
+                        wardSelect.innerHTML = '<option value="">Select a constituency first</option>';
+                        wardSelect.disabled = true;
+                    }
+                });
+            }
+
+            // Initialize form state
+            if (countySelect && countySelect.value) {
+                // Trigger change event if county is pre-selected (e.g., form validation failed)
+                countySelect.dispatchEvent(new Event('change'));
+                
+                // If constituency is also pre-selected, trigger its change event after a delay
+                if (constituencySelect && constituencySelect.value) {
+                    setTimeout(() => {
+                        constituencySelect.dispatchEvent(new Event('change'));
+                    }, 500);
+                }
+            }
+        </script>
+
+        <div style="margin-top: 18px;">
+            <h2 style="font-size: 16px; margin-bottom: 8px;">Recent swaps</h2>
+            {% if recent_swaps %}
+                <ul style="padding-left: 18px; margin: 0; color: #cbd5f5;">
+                    {% for swap in recent_swaps %}
+                        <li>
+                            {{ swap.county }}{% if swap.subcounty %}, {{ swap.subcounty }}{% endif %}{% if swap.constituency %}, {{ swap.constituency }}{% endif %}
+                            · {{ swap.get_gender_display }} · {{ swap.get_boarding_display }}
+                            — {{ swap.created_at|date:"M j, Y H:i" }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color: #9ca3af; margin: 0;">No swaps created yet.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+
+

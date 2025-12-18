@@ -1,0 +1,508 @@
+{% extends 'users/base.html' %}
+
+{% block title %}{{ title }} - TSC Swap{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-4xl mx-auto">
+        <div class="bg-gray-700 rounded-2xl shadow-xl overflow-hidden">
+            <div class="p-8">
+                <div class="text-center mb-8">
+                    <h1 class="text-3xl font-bold text-white mb-2">{{ title }}</h1>
+                    <p class="text-gray-300">Please provide the details of your school to get started.</p>
+                </div>
+                
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- School Name -->
+                        <div class="col-span-2">
+                            <label for="id_name" class="block text-sm font-medium text-gray-300 mb-2">
+                                School Name <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m-1-7h1m-1 4h1m4-4h1m-1 4h1m4-4h1m-1 4h1m-5-10v5a1 1 0 01-1 1h-2a1 1 0 01-1-1V7m4 0h4"/>
+                                    </svg>
+                                </div>
+                                <input type="text" name="name" id="id_name" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400" placeholder="Enter school name" value="{{ form.name.value|default:'' }}" required>
+                            </div>
+                            {% if form.name.errors %}
+                                <div class="mt-1 text-sm text-red-400">
+                                    {% for error in form.name.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                
+                        <!-- Gender -->
+                        <div>
+                            <label for="id_gender" class="block text-sm font-medium text-gray-300 mb-2">
+                                Gender <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                                    </svg>
+                                </div>
+                                <select name="gender" id="id_gender" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none" required>
+                                    {% for value, label in form.fields.gender.choices %}
+                                        <option value="{{ value }}" {% if form.gender.value == value or school.gender == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% if form.gender.errors %}
+                                <div class="mt-1 text-sm text-red-400">
+                                    {% for error in form.gender.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                
+                        <!-- Level -->
+                        <div>
+                            <label for="id_level" class="block text-sm font-medium text-gray-300 mb-2">
+                                Level <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <select name="level" id="id_level" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none" required>
+                                    {% for level in form.fields.level.queryset %}
+                                        <option value="{{ level.id }}" {% if form.level.value == level.id|stringformat:'s' or school.level_id == level.id %}selected{% endif %}>{{ level.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% if form.level.errors %}
+                                <div class="mt-1 text-sm text-red-400">
+                                    {% for error in form.level.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                
+                        <!-- Boarding -->
+                        <div>
+                            <label for="id_boarding" class="block text-sm font-medium text-gray-300 mb-2">
+                                Boarding Type <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5m-1-7h1m-1 4h1m4-4h1m-1 4h1m4-4h1m-1 4h1m-5-10v5a1 1 0 01-1 1h-2a1 1 0 01-1-1V7m4 0h4" />
+                                    </svg>
+                                </div>
+                                <select name="boarding" id="id_boarding" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none" required>
+                                    {% for value, label in form.fields.boarding.choices %}
+                                        <option value="{{ value }}" {% if form.boarding.value == value or school.boarding == value %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% if form.boarding.errors %}
+                                <div class="mt-1 text-sm text-red-400">
+                                    {% for error in form.boarding.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                
+                        <!-- Curriculum -->
+                        <div>
+                            <label for="id_curriculum" class="block text-sm font-medium text-gray-300 mb-2">
+                                Curriculum <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                </div>
+                                <select name="curriculum" id="id_curriculum" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none" required>
+                                    {% for curriculum in form.fields.curriculum.queryset %}
+                                        <option value="{{ curriculum.id }}" {% if form.curriculum.value == curriculum.id|stringformat:'s' or school.curriculum_id == curriculum.id %}selected{% endif %}>{{ curriculum.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            {% if form.curriculum.errors %}
+                                <div class="mt-1 text-sm text-red-400">
+                                    {% for error in form.curriculum.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                
+                        <!-- Postal Code -->
+                        <div>
+                            <label for="id_postal_code" class="block text-sm font-medium text-gray-300 mb-2">
+                                Postal Code <span class="text-red-500">*</span>
+                            </label>
+                            <div class="relative">
+                                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                    <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                                    </svg>
+                                </div>
+                                <input type="text" name="postal_code" id="id_postal_code" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 placeholder-gray-400" placeholder="e.g., 00100" value="{{ form.postal_code.value|default:'' }}" required>
+                            </div>
+                            {% if form.postal_code.errors %}
+                                <div class="mt-1 text-sm text-red-400">
+                                    {% for error in form.postal_code.errors %}
+                                        <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                            <p class="mt-2 text-xs text-gray-400">{{ form.fields.postal_code.help_text }}</p>
+                        </div>
+                
+                <!-- Location Fields -->
+                <div class="col-span-2 pt-4">
+                    <div class="border-t border-slate-700 pt-6">
+                        <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            School Location
+                        </h3>
+                        <p class="text-sm text-gray-400 mb-6">Please provide the location details of your school</p>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <!-- County -->
+                            <div>
+                                <label for="county" class="block text-sm font-medium text-slate-300 mb-2">
+                                    County <span class="text-red-500">*</span>
+                                </label>
+                                <div class="relative">
+                                    <select id="county" name="county" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none">
+                                        <option value="">Select a county</option>
+                                        {% for county in counties %}
+                                            <option value="{{ county.id }}" {% if form.county.value == county.id|stringformat:'s' or school.ward.constituency.county_id == county.id %}selected{% endif %}>{{ county.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                    <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                        </svg>
+                                    </div>
+                                </div>
+                        
+                        <!-- Constituency -->
+                        <div>
+                            <label for="constituency" class="block text-sm font-medium text-gray-300 mb-1">
+                                Constituency <span class="text-red-500">*</span>
+                            </label>
+                            <select id="constituency" name="constituency" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none" {% if not school.ward.constituency_id %}disabled{% endif %}>
+                                <option value="">Select a constituency</option>
+                                {% for constituency in constituencies %}
+                                    <option value="{{ constituency.id }}" {% if form.constituency.value == constituency.id|stringformat:'s' or school.ward.constituency_id == constituency.id %}selected{% endif %}>{{ constituency.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        
+                        <!-- Ward -->
+                        <div>
+                            <label for="id_ward" class="block text-sm font-medium text-gray-300 mb-1">
+                                Ward <span class="text-red-500">*</span>
+                            </label>
+                            <select name="ward" id="id_ward" class="block w-full pl-10 pr-3 py-2.5 text-base text-white bg-gray-700 border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 appearance-none" required>
+                                <option value="">Select a ward</option>
+                                {% for ward in wards %}
+                                    <option value="{{ ward.id }}" {% if form.ward.value == ward.id|stringformat:'s' or school.ward_id == ward.id %}selected{% endif %}>{{ ward.name }}</option>
+                                {% endfor %}
+                            </select>
+                            {% if form.ward.errors %}
+                                <p class="mt-1 text-sm text-red-500">{{ form.ward.errors.0 }}</p>
+                            {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end space-x-4 pt-6">
+                        <a href="{% url 'home:all_schools' %}" class="px-4 py-2.5 border border-gray-600 rounded-md text-sm font-medium text-white bg-gray-700 hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 focus:ring-offset-gray-800">
+                            Cancel
+                        </a>
+                        <button type="submit" class="inline-flex items-center px-4 py-2.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500 focus:ring-offset-gray-800">
+                            <svg class="-ml-1 mr-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            Save School
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript for form styling and dynamic location fields -->
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Add consistent styling to all form inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            // Skip if already has specific styling
+            if (!input.classList.contains('form-select') && !input.classList.contains('btn')) {
+                input.classList.add('block', 'w-full', 'pl-10', 'pr-3', 'py-2.5', 'text-base', 'border', 'border-gray-300', 'rounded-lg', 'focus:outline-none', 'focus:ring-2', 'focus:ring-blue-500', 'focus:border-blue-500', 'transition-colors', 'duration-200');
+                
+                // Add dark mode styles for dark background inputs
+                if (input.classList.contains('bg-slate-700')) {
+                    input.classList.add('text-white', 'border-gray-600');
+                }
+            }
+            
+            // Add focus styles
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50', 'rounded-lg');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+            });
+        });
+        
+        // Initialize select2 for better select dropdowns
+        if (typeof $ !== 'undefined') {
+            $('select').select2({
+                theme: 'bootstrap4',
+                width: '100%',
+                placeholder: 'Select an option',
+                allowClear: true
+            });
+        }
+        // Get DOM elements
+        const countySelect = document.getElementById('county');
+        const constituencySelect = document.getElementById('constituency');
+        const wardSelect = document.getElementById('id_ward');
+        
+        // Add form validation
+        const form = document.querySelector('form');
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                if (!wardSelect || !wardSelect.value) {
+                    e.preventDefault();
+                    alert('Please select a valid ward.');
+                    return false;
+                }
+                return true;
+            });
+        }
+        
+        // Style all form inputs
+        const inputs = document.querySelectorAll('input, select, textarea');
+        inputs.forEach(input => {
+            input.classList.add('block', 'w-full', 'px-4', 'py-2.5', 'text-base', 'text-white', 'bg-slate-700', 'border', 'border-gray-600', 'rounded-lg', 'focus:ring-2', 'focus:ring-blue-500', 'focus:border-blue-500', 'transition-colors', 'duration-200');
+            
+            // Add focus styles
+            input.addEventListener('focus', function() {
+                this.parentElement.classList.add('ring-2', 'ring-blue-500', 'ring-opacity-50');
+                this.parentElement.classList.add('rounded-lg');
+            });
+            
+            input.addEventListener('blur', function() {
+                this.parentElement.classList.remove('ring-2', 'ring-blue-500', 'ring-opacity-50');
+            });
+        });
+        
+        // Style select elements specifically
+        const selects = document.querySelectorAll('select');
+        selects.forEach(select => {
+            select.classList.add('appearance-none', 'pr-10');
+        });
+        const countySelect = document.getElementById('county');
+        const constituencySelect = document.getElementById('constituency');
+        const wardSelect = document.getElementById('id_ward');
+        
+        // Function to load constituencies
+        function loadConstituencies(countyId) {
+            if (!countyId) {
+                constituencySelect.innerHTML = '<option value="">Select a constituency</option>';
+                constituencySelect.disabled = true;
+                wardSelect.disabled = true;
+                return;
+            }
+            
+            fetch(`/schools/get-constituencies/?county_id=${countyId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const options = '<option value="">Select a constituency</option>' + 
+                        data.constituencies.map(c => 
+                            `<option value="${c.id}">${c.name}</option>`
+                        ).join('');
+                    
+                    constituencySelect.innerHTML = options;
+                    constituencySelect.disabled = false;
+                    wardSelect.disabled = true;
+                });
+        }
+        
+        // Function to load wards
+        function loadWards(constituencyId) {
+            if (!constituencyId) {
+                wardSelect.innerHTML = '<option value="">Select a ward</option>';
+                wardSelect.disabled = true;
+                return;
+            }
+            
+            fetch(`/schools/get-wards/?constituency_id=${constituencyId}`)
+                .then(response => response.json())
+                .then(data => {
+                    const options = '<option value="">Select a ward</option>' + 
+                        data.wards.map(w => 
+                            `<option value="${w.id}">${w.name}</option>`
+                        ).join('');
+                    
+                    wardSelect.innerHTML = options;
+                    wardSelect.disabled = false;
+                });
+        }
+        
+        // Function to load constituencies
+        async function loadConstituencies(countyId) {
+            if (!countyId) {
+                // Clear and disable constituency and ward selects
+                constituencySelect.innerHTML = '<option value="">Select a constituency</option>';
+                wardSelect.innerHTML = '<option value="">Select a ward</option>';
+                constituencySelect.disabled = true;
+                wardSelect.disabled = true;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/get-constituencies/?county_id=${countyId}`);
+                const data = await response.json();
+                
+                // Clear and populate constituencies
+                constituencySelect.innerHTML = '<option value="">Select a constituency</option>';
+                data.constituencies.forEach(constituency => {
+                    const option = document.createElement('option');
+                    option.value = constituency.id;
+                    option.textContent = constituency.name;
+                    constituencySelect.appendChild(option);
+                });
+                
+                // Enable constituency select
+                constituencySelect.disabled = false;
+                
+                // Clear and disable ward select
+                wardSelect.innerHTML = '<option value="">Select a ward</option>';
+                wardSelect.disabled = true;
+                
+            } catch (error) {
+                console.error('Error loading constituencies:', error);
+            }
+        }
+        
+        // Function to load wards
+        async function loadWards(constituencyId) {
+            if (!constituencyId) {
+                // Clear and disable ward select
+                wardSelect.innerHTML = '<option value="">Select a ward</option>';
+                wardSelect.disabled = true;
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/get-wards/?constituency_id=${constituencyId}`);
+                const data = await response.json();
+                
+                // Clear and populate wards
+                wardSelect.innerHTML = '<option value="">Select a ward</option>';
+                data.wards.forEach(ward => {
+                    const option = document.createElement('option');
+                    option.value = ward.id;
+                    option.textContent = ward.name;
+                    
+                    // Check if this is the selected ward
+                    if (wardSelect.dataset.selected && wardSelect.dataset.selected === ward.id.toString()) {
+                        option.selected = true;
+                    }
+                    
+                    wardSelect.appendChild(option);
+                });
+                
+                // Enable ward select
+                wardSelect.disabled = false;
+                
+            } catch (error) {
+                console.error('Error loading wards:', error);
+            }
+        }
+        
+        // Initialize form with selected values if they exist
+        if (countySelect && constituencySelect && wardSelect) {
+            // Add event listeners for form validation
+            const form = document.querySelector('form');
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    if (!wardSelect.value) {
+                        e.preventDefault();
+                        alert('Please select a valid ward.');
+                        wardSelect.focus();
+                        return false;
+                    }
+                    return true;
+                });
+            }
+            // Set the selected county if it exists
+            const selectedCounty = countySelect.querySelector('option:checked');
+            if (selectedCounty && selectedCounty.value) {
+                loadConstituencies(selectedCounty.value).then(() => {
+                    // After loading constituencies, set the selected constituency if it exists
+                    const selectedConstituency = '{{ selected_constituency|default:'' }}';
+                    if (selectedConstituency) {
+                        const option = constituencySelect.querySelector(`option[value="${selectedConstituency}"]`);
+                        if (option) {
+                            option.selected = true;
+                            loadWards(selectedConstituency);
+                        }
+                    }
+                });
+            }
+            
+            // Set the selected ward if it exists
+            const selectedWard = '{{ selected_ward|default:'' }}';
+            if (selectedWard) {
+                wardSelect.dataset.selected = selectedWard;
+            }
+        }
+        
+        // Event listeners
+        if (countySelect) {
+            countySelect.addEventListener('change', function() {
+                loadConstituencies(this.value);
+            });
+        }
+        
+        if (constituencySelect) {
+            constituencySelect.addEventListener('change', function() {
+                loadWards(this.value);
+            });
+        }
+        
+        constituencySelect.addEventListener('change', function() {
+            loadWards(this.value);
+        });
+        
+        // Initialize form state
+        if (countySelect.value) {
+            loadConstituencies(countySelect.value);
+        } else {
+            constituencySelect.disabled = true;
+            wardSelect.disabled = true;
+        }
+    });
+</script>
+{% endblock %}

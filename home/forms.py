@@ -1,0 +1,179 @@
+from django import forms
+from .models import MySubject, Subject, Swaps, Counties, Constituencies, Wards, Schools, Level, Curriculum
+
+
+class MySubjectForm(forms.ModelForm):
+    def __init__(self, *args, user=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Get the user's level from their profile if available
+        user_level = None
+        if hasattr(user, 'profile') and hasattr(user.profile, 'level'):
+            user_level = user.profile.level
+        
+        # Filter subjects by user's level if available, otherwise show all
+        if user_level:
+            self.fields['subject'].queryset = Subject.objects.filter(level=user_level).order_by('name')
+        else:
+            self.fields['subject'].queryset = Subject.objects.all().order_by('name')
+    
+    subject = forms.ModelMultipleChoiceField(
+        queryset=Subject.objects.none(),  # Will be set in __init__
+        widget=forms.CheckboxSelectMultiple,
+        required=True,
+        label="Subjects",
+    )
+
+    class Meta:
+        model = MySubject
+        fields = ["subject"]
+
+
+class SwapForm(forms.ModelForm):
+    gender = forms.ChoiceField(
+        choices=Swaps.Gender,
+        label="Preferred school gender",
+        widget=forms.Select(attrs={"class": "swap-input"}),
+    )
+    boarding = forms.ChoiceField(
+        choices=Swaps.Boarding,
+        label="Preferred boarding type",
+        widget=forms.Select(attrs={"class": "swap-input"}),
+    )
+    county = forms.ModelChoiceField(
+        queryset=Counties.objects.all().order_by('name'),
+        required=True,
+        label="Target county *",
+        help_text="Required field",
+        widget=forms.Select(attrs={"class": "swap-input"}),
+    )
+    constituency = forms.ModelChoiceField(
+        queryset=Constituencies.objects.none(),
+        required=False,
+        label="Target constituency (optional)",
+        help_text="Optional - Select a county first to see available constituencies",
+        widget=forms.Select(attrs={"class": "swap-input"}),
+    )
+    
+    ward = forms.ModelChoiceField(
+        queryset=Wards.objects.none(),
+        required=False,
+        label="Target ward (optional)",
+        help_text="Optional - Select a constituency first to see available wards",
+        widget=forms.Select(attrs={"class": "swap-input"}),
+    )
+
+    class Meta:
+        model = Swaps
+        fields = ["gender", "boarding", "county", "constituency", "ward"]
+        
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['constituency'].queryset = Constituencies.objects.none()
+        self.fields['ward'].queryset = Wards.objects.none()
+        
+        if 'county' in self.data:
+            try:
+                county_id = int(self.data.get('county'))
+                self.fields['constituency'].queryset = Constituencies.objects.filter(county_id=county_id).order_by('name')
+            except (ValueError, TypeError):
+                pass
+                
+        if 'constituency' in self.data:
+            try:
+                constituency_id = int(self.data.get('constituency'))
+                self.fields['ward'].queryset = Wards.objects.filter(constituency_id=constituency_id).order_by('name')
+            except (ValueError, TypeError):
+                pass
+
+
+class SchoolForm(forms.ModelForm):
+    county = forms.ModelChoiceField(
+        queryset=Counties.objects.all().order_by('name'),
+        required=True,
+        label="County"
+    )
+    
+    constituency = forms.ModelChoiceField(
+        queryset=Constituencies.objects.none(),
+        required=False,
+        label="Constituency"
+    )
+    
+    ward = forms.ModelChoiceField(
+        queryset=Wards.objects.all(),
+        required=True,
+        label="Ward"
+    )
+    
+    class Meta:
+        model = Schools
+        fields = ['name', 'gender', 'level', 'boarding', 'curriculum', 'postal_code', 'ward']
+        widgets = {
+            'name': forms.TextInput(attrs={'class': 'form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'gender': forms.Select(attrs={'class': 'form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'level': forms.Select(attrs={'class': 'form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'boarding': forms.Select(attrs={'class': 'form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'curriculum': forms.Select(attrs={'class': 'form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'postal_code': forms.TextInput(attrs={'class': 'form-input mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'ward': forms.Select(attrs={'class': 'form-select mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-teal-500 focus:ring-teal-500'}),
+            'county': forms.HiddenInput(),
+            'constituency': forms.HiddenInput(),
+        }
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        
+        # Order the choices in the dropdowns
+        self.fields['level'].queryset = Level.objects.all().order_by('name')
+        self.fields['curriculum'].queryset = Curriculum.objects.all().order_by('name')
+        
+        # Set initial values if we're editing an existing school
+        if self.instance and self.instance.pk and self.instance.ward:
+            self.fields['county'].initial = self.instance.ward.constituency.county
+            self.fields['constituency'].queryset = Constituencies.objects.filter(county=self.instance.ward.constituency.county)
+            self.fields['constituency'].initial = self.instance.ward.constituency
+            self.fields['ward'].queryset = Wards.objects.filter(constituency=self.instance.ward.constituency)
+        else:
+            # Initialize with empty querysets for new forms
+            self.fields['constituency'].queryset = Constituencies.objects.none()
+            self.fields['ward'].queryset = Wards.objects.none()
+            
+            # If we have county in the POST data, update the constituency queryset
+            if 'county' in self.data:
+                try:
+                    county_id = int(self.data.get('county'))
+                    self.fields['constituency'].queryset = Constituencies.objects.filter(county_id=county_id).order_by('name')
+                    
+                    # If we also have a constituency in POST data, update the ward queryset
+                    if 'constituency' in self.data:
+                        try:
+                            constituency_id = int(self.data.get('constituency'))
+                            self.fields['ward'].queryset = Wards.objects.filter(constituency_id=constituency_id).order_by('name')
+                        except (ValueError, TypeError):
+                            pass
+                except (ValueError, TypeError):
+                    pass
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        
+        # Ensure the selected ward exists
+        ward = cleaned_data.get('ward')
+        if not ward:
+            raise forms.ValidationError({
+                'ward': 'Please select a valid ward.'
+            })
+            
+        return cleaned_data
+        
+        help_texts = {
+            'postal_code': 'Enter the postal code of the school',
+        }
+        
+        # If we're editing an existing instance, set the querysets based on the instance's data
+        if self.instance and self.instance.ward_id:
+            self.fields['ward'].queryset = Wards.objects.filter(
+                constituency=self.instance.ward.constituency
+            ).order_by('name')
+

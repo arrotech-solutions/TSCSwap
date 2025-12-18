@@ -1,0 +1,225 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Teaching Information - TSC Swap{% endblock %}
+
+{% block extra_css %}
+<style>
+    body, main {
+        background: #030711;
+        color: #e5e7eb;
+    }
+    
+    .checkbox-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 12px;
+        margin: 12px 0;
+    }
+    
+    .checkbox-group li {
+        display: flex;
+        align-items: center;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px 16px;
+        transition: all 0.2s ease;
+    }
+    
+    .checkbox-group li:hover {
+        background: #1e293b;
+        border-color: #4b5563;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        accent-color: #3b82f6;
+        cursor: pointer;
+    }
+    
+    .checkbox-group label {
+        color: #e5e7eb;
+        font-size: 15px;
+        cursor: pointer;
+        flex: 1;
+        margin: 0;
+        padding: 4px 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-900 py-6 flex flex-col justify-center sm:py-12">
+    <div class="relative py-3 sm:max-w-2xl sm:mx-auto w-full">
+        <div class="relative px-4 py-10 bg-gray-800 shadow-xl sm:rounded-3xl sm:p-10 border border-gray-700">
+            <div class="max-w-2xl mx-auto">
+                <div class="text-center mb-8">
+                    <h2 class="text-2xl font-bold text-white">Your Teaching Information</h2>
+                    <p class="mt-2 text-gray-400">Please select your teaching level and subjects</p>
+                </div>
+
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mb-6 p-4 rounded-lg {% if message.tags %}{{ message.tags }}{% endif %}
+                            {% if message.level == DEFAULT_MESSAGE_LEVELS.ERROR %}bg-red-900/30 text-red-200 border border-red-800/50{% endif %}
+                            {% if message.level == DEFAULT_MESSAGE_LEVELS.SUCCESS %}bg-green-900/30 text-green-200 border border-green-800/50{% endif %}
+                            {% if message.level == DEFAULT_MESSAGE_LEVELS.INFO %}bg-blue-900/30 text-blue-200 border border-blue-800/50{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <!-- Level Selection -->
+                    <div>
+                        <label for="level" class="block text-sm font-medium text-gray-300 mb-2">Teaching Level <span class="text-red-400">*</span></label>
+                        <select id="level" name="level" required
+                            class="mt-1 block w-full pl-3 pr-10 py-3 text-base bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="">Select a level</option>
+                            {% for level in levels %}
+                                <option value="{{ level.id }}" {% if current_level == level.id %}selected{% endif %}>
+                                    {{ level.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <!-- Subjects Selection -->
+                    <div id="subjects-container" class="mt-6">
+                        <div class="flex items-center justify-between mb-2">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-300">Subjects You Teach <span class="text-red-400">*</span></label>
+                                <p class="text-xs text-gray-400">Select all subjects you are qualified to teach</p>
+                            </div>
+                            <span id="selected-count" class="text-xs text-gray-400">0 selected</span>
+                        </div>
+                        
+                        <div id="subjects-list" class="mt-2 bg-gray-800 border border-gray-700 rounded-lg p-4 max-h-96 overflow-y-auto">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                {% for subject in subjects %}
+                                    <div class="flex items-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                                        <input type="checkbox" id="subject-{{ subject.id }}" name="subjects" value="{{ subject.id }}"
+                                            class="h-4 w-4 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800"
+                                            {% if subject.id in current_subjects %}checked{% endif %}>
+                                        <label for="subject-{{ subject.id }}" class="ml-3 text-sm font-medium text-gray-300">
+                                            {{ subject.name }}
+                                        </label>
+                                    </div>
+                                {% empty %}
+                                    <p class="col-span-2 text-sm text-gray-400 py-4 text-center">Please select a level to view available subjects</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <p id="no-subjects-message" class="mt-2 text-sm text-yellow-400 hidden">
+                            No subjects found for the selected level.
+                        </p>
+                    </div>
+
+                    <div class="flex items-center justify-between pt-4 border-t border-gray-700 mt-8">
+                        <a href="{% url 'home:home' %}" class="text-sm font-medium text-blue-400 hover:text-blue-300 transition-colors">
+                            Skip for now
+                        </a>
+                        <button type="submit"
+                            class="inline-flex items-center justify-center py-2.5 px-6 text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-gray-800 transition-colors">
+                            Save and Continue
+                            <svg class="ml-2 -mr-1 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const levelSelect = document.getElementById('level');
+    const subjectsContainer = document.getElementById('subjects-list');
+    const noSubjectsMessage = document.getElementById('no-subjects-message');
+    const selectedCount = document.getElementById('selected-count');
+    
+    // Update selected count on page load
+    function updateSelectedCount() {
+        const checkedBoxes = document.querySelectorAll('input[name="subjects"]:checked');
+        const count = checkedBoxes.length;
+        selectedCount.textContent = `${count} selected`;
+        selectedCount.className = `text-xs ${count > 0 ? 'text-blue-400' : 'text-gray-400'}`;
+    }
+    
+    // Update count when checkboxes change
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'subjects') {
+            updateSelectedCount();
+        }
+    });
+    
+    // Initial count update
+    updateSelectedCount();
+
+    levelSelect.addEventListener('change', function() {
+        const levelId = this.value;
+        
+        if (!levelId) {
+            subjectsContainer.innerHTML = `
+                <div class="col-span-2">
+                    <p class="text-sm text-gray-400 py-4 text-center">Please select a level to view available subjects</p>
+                </div>`;
+            noSubjectsMessage.classList.add('hidden');
+            return;
+        }
+
+        // Show loading state with animation
+        subjectsContainer.innerHTML = `
+            <div class="col-span-2 flex flex-col items-center justify-center py-8">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mb-3"></div>
+                <p class="text-sm text-gray-400">Loading subjects...</p>
+            </div>`;
+        
+        // Fetch subjects for the selected level
+        fetch(`/users/api/levels/${levelId}/subjects/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.subjects && data.subjects.length > 0) {
+                    let html = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">';
+                    data.subjects.forEach(subject => {
+                        const isChecked = {{ current_subjects|safe }}.includes(subject.id) ? 'checked' : '';
+                        html += `
+                            <div class="flex items-center p-2 hover:bg-gray-700/50 rounded-lg transition-colors">
+                                <input type="checkbox" id="subject-${subject.id}" name="subjects" value="${subject.id}" 
+                                    class="h-4 w-4 text-blue-500 bg-gray-700 border-gray-600 rounded focus:ring-blue-500 focus:ring-offset-gray-800" ${isChecked}>
+                                <label for="subject-${subject.id}" class="ml-3 text-sm font-medium text-gray-300">
+                                    ${subject.name}
+                                </label>
+                            </div>`;
+                    });
+                    html += '</div>';
+                    subjectsContainer.innerHTML = html;
+                    noSubjectsMessage.classList.add('hidden');
+                    
+                    // Update count after loading new subjects
+                    updateSelectedCount();
+                } else {
+                    subjectsContainer.innerHTML = '';
+                    noSubjectsMessage.classList.remove('hidden');
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching subjects:', error);
+                subjectsContainer.innerHTML = `
+                    <div class="col-span-2">
+                        <p class="text-sm text-red-400 py-4 text-center">Error loading subjects. Please try again.</p>
+                    </div>`;
+                noSubjectsMessage.classList.add('hidden');
+            });
+    });
+});
+</script>
+{% endblock %}

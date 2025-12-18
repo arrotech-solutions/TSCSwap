@@ -1,0 +1,138 @@
+{% extends "users/base.html" %}
+
+{% block title %}My Subjects · TSC Swap{% endblock %}
+
+{% block extra_css %}
+<style>
+    body, main {
+        background: #030711;
+        color: #e5e7eb;
+    }
+    
+    .checkbox-group {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 12px;
+        margin: 12px 0;
+    }
+    
+    .checkbox-group li {
+        display: flex;
+        align-items: center;
+        background: #1e293b;
+        border: 1px solid #334155;
+        border-radius: 8px;
+        padding: 12px 16px;
+        transition: all 0.2s ease;
+    }
+    
+    .checkbox-group li:hover {
+        background: #1e293b;
+        border-color: #4b5563;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .checkbox-group input[type="checkbox"] {
+        width: 18px;
+        height: 18px;
+        margin-right: 12px;
+        accent-color: #3b82f6;
+        cursor: pointer;
+    }
+    
+    .checkbox-group label {
+        color: #e5e7eb;
+        font-size: 15px;
+        cursor: pointer;
+        flex: 1;
+        margin: 0;
+        padding: 4px 0;
+    }
+    
+    .subject-count {
+        color: #9ca3af;
+        font-size: 0.9em;
+        margin-left: 10px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+    <div class="page" style="max-width: 640px; margin: 16px auto 0; padding: 20px 22px; background: #0f172a; border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 12px;">
+        <h1 style="margin-top: 0; font-size: 22px;">My subjects</h1>
+
+        {% if user %}
+            <div style="margin-bottom: 16px; padding: 16px; background: #1e293b; border-radius: 8px; border-left: 4px solid {% if user_level %}#3b82f6{% else %}#ef4444{% endif %};">
+                <p style="margin: 0 0 6px 0; color: #e5e7eb;">
+                    You are adding subjects for <strong>{{ display_name }}</strong>
+                    {% if user_level %}
+                        <br>Education Level: <strong>{{ user_level }}</strong>
+                    {% else %}
+                        <div style="margin-top: 8px; padding: 10px; background: rgba(239, 68, 68, 0.1); border-radius: 6px;">
+                            <p style="margin: 0 0 10px 0; color: #fca5a5;">
+                                <strong>Action Required:</strong> You need to set your education level before you can select subjects.
+                            </p>
+                            <a href="{% url 'users:select_teaching_info' %}" style="display: inline-block; padding: 8px 16px; background: #3b82f6; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; transition: background-color 0.2s;">
+                                Set Teaching Information
+                            </a>
+                        </div>
+                    {% endif %}
+                </p>
+            </div>
+        {% else %}
+            <p style="color: #fca5a5; margin: 6px 0 14px 0;">Please log in to add your subjects.</p>
+        {% endif %}
+
+        {% if success %}
+            <div style="padding: 10px 12px; border-radius: 8px; background: rgba(22, 163, 74, 0.2); border: 1px solid rgba(22, 163, 74, 0.4); color: #bbf7d0; margin-bottom: 12px;">
+                Saved successfully.
+            </div>
+        {% endif %}
+
+        {% if user_level %}
+            <form method="post" style="display: flex; flex-direction: column; gap: 14px;">
+                {% csrf_token %}
+                <div>
+                    <label style="font-weight: 600; margin-bottom: 6px; display: block;">Available Subjects for {{ user_level }}</label>
+                    <ul class="checkbox-group" style="list-style: none; padding-left: 0;">
+                        {% for checkbox in form.subject %}
+                            <li>
+                                {{ checkbox.tag }}
+                                <label for="{{ checkbox.id_for_label }}">
+                                    {{ checkbox.choice_label }}
+                                    <span class="subject-count">{{ forloop.counter }}</span>
+                                </label>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                <button style="padding: 10px 14px; border: none; border-radius: 8px; background: #2563eb; color: #e5e7eb; font-weight: 600; cursor: pointer;" type="submit">
+                    Save My Subjects
+                </button>
+            </form>
+        {% else %}
+            <div style="padding: 16px; background: #1e293b; border-radius: 8px; border: 1px solid #334155; margin-bottom: 20px;">
+                <p style="margin: 0 0 16px 0; color: #e5e7eb;">
+                    To select your subjects, please set your education level in your profile first.
+                </p>
+                <a href="{% url 'users:select_teaching_info' %}" style="display: inline-block; padding: 10px 16px; background: #2563eb; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; transition: background-color 0.2s;">
+                    Set Teaching Information
+                </a>
+            </div>
+        {% endif %}
+
+        <div style="margin-top: 18px;">
+            <h2 style="font-size: 16px; margin-bottom: 8px;">Subjects already linked to you</h2>
+            {% if current_subjects %}
+                <ul style="padding-left: 18px; margin: 0; color: #cbd5f5;">
+                    {% for subj in current_subjects %}
+                        <li>{{ subj.name }} ({{ subj.code }})</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p style="color: #9ca3af; margin: 0;">No subjects linked yet.</p>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
+

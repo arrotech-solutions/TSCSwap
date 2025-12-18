@@ -1,0 +1,847 @@
+{% extends "users/base.html" %}
+{% load static %}
+
+{% block title %}All Swaps · TSC Swap{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* AI Search Button */
+    .ai-search-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.1), 0 2px 4px -1px rgba(79, 70, 229, 0.06);
+    }
+    
+    .ai-search-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(79, 70, 229, 0.1), 0 4px 6px -2px rgba(79, 70, 229, 0.05);
+    }
+    
+    .ai-search-btn:active {
+        transform: translateY(0);
+    }
+    
+    .ai-search-btn svg {
+        width: 1.25rem;
+        height: 1.25rem;
+    }
+    
+    /* Modal Styles */
+    .ai-modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    .ai-modal-content {
+        background: #1f2937;
+        border-radius: 0.75rem;
+        width: 90%;
+        max-width: 500px;
+        padding: 1.5rem;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        position: relative;
+    }
+    
+    .ai-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .ai-modal-header h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #f3f4f6;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .ai-modal-close {
+        background: none;
+        border: none;
+        color: #9ca3af;
+        cursor: pointer;
+        padding: 0.25rem;
+        border-radius: 0.25rem;
+    }
+    
+    .ai-modal-close:hover {
+        color: #f3f4f6;
+        background-color: #374151;
+    }
+    
+    .ai-modal-body {
+        margin-bottom: 1.5rem;
+    }
+    
+    .ai-modal-body p {
+        color: #d1d5db;
+        margin-bottom: 1.5rem;
+        line-height: 1.5;
+    }
+    
+    .ai-search-form .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .ai-search-form label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    
+    .ai-search-form input[type="text"] {
+        width: 100%;
+        padding: 0.625rem 0.875rem;
+        border: 1px solid #374151;
+        border-radius: 0.5rem;
+        background-color: #111827;
+        color: #f3f4f6;
+        font-size: 0.875rem;
+        transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .ai-search-form input[type="text"]:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    
+    .ai-modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+    
+    .ai-search-submit {
+        background: #6366f1;
+        color: white;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .ai-search-submit:hover {
+        background: #4f46e5;
+    }
+    
+    .ai-search-submit:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+    
+    .ai-search-cancel {
+        background: #374151;
+        color: #f3f4f6;
+        border: none;
+        border-radius: 0.5rem;
+        padding: 0.625rem 1.25rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s ease;
+    }
+    
+    .ai-search-cancel:hover {
+        background: #4b5563;
+    }
+    /* Filter Form Styles */
+    .filter-form {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    .filter-form h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #f3f4f6;
+        margin-top: 0;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .filter-form h3 svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        color: #60a5fa;
+    }
+    .filter-grid {
+        display: grid;
+        grid-template-columns: repeat(1, 1fr);
+        gap: 1rem;
+    }
+    @media (min-width: 768px) {
+        .filter-grid {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+    .form-group {
+        margin-bottom: 0;
+    }
+    .form-group label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #9ca3af;
+        margin-bottom: 0.5rem;
+    }
+    .form-control {
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        color: #f3f4f6;
+        background-color: #1f2937;
+        border: 1px solid #374151;
+        border-radius: 0.375rem;
+        transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .form-control:focus {
+        outline: none;
+        border-color: #60a5fa;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
+    .filter-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #1f2937;
+    }
+    .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.5rem 1rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        border-radius: 0.375rem;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-primary {
+        background-color: #3b82f6;
+        color: white;
+        border: 1px solid #3b82f6;
+    }
+    .btn-primary:hover {
+        background-color: #2563eb;
+        border-color: #2563eb;
+    }
+    .btn-outline {
+        background-color: transparent;
+        color: #9ca3af;
+        border: 1px solid #4b5563;
+    }
+    .btn-outline:hover {
+        background-color: #1f2937;
+        color: #e5e7eb;
+        border-color: #6b7280;
+    }
+    body, main {
+        background: #030711;
+        color: #e5e7eb;
+    }
+    .swaps-container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 0 1rem;
+    }
+    .page-header {
+        text-align: center;
+        margin-bottom: 2.5rem;
+    }
+    .page-header h1 {
+        font-size: 2.25rem;
+        font-weight: 700;
+        color: #f3f4f6;
+        margin-bottom: 0.5rem;
+        background: linear-gradient(to right, #60a5fa, #34d399);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: inline-block;
+    }
+    .page-header p {
+        color: #9ca3af;
+        font-size: 1.125rem;
+        max-width: 42rem;
+        margin: 0 auto;
+        line-height: 1.6;
+    }
+    .swaps-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 2rem;
+    }
+    .swap-card {
+        background: #111827;
+        border: 1px solid #1f2937;
+        border-radius: 0.75rem;
+        overflow: hidden;
+        transition: all 0.3s ease;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
+    .swap-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        border-color: #3b82f6;
+    }
+    .card-header {
+        padding: 1.25rem 1.5rem 0.5rem;
+        border-bottom: 1px solid #1f2937;
+    }
+    .card-header h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #f9fafb;
+        margin: 0 0 0.5rem 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .location {
+        display: flex;
+        align-items: center;
+        color: #9ca3af;
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+    .location svg {
+        width: 1rem;
+        height: 1rem;
+        margin-right: 0.375rem;
+        color: #60a5fa;
+    }
+    .card-body {
+        padding: 1.25rem 1.5rem;
+        flex-grow: 1;
+    }
+    .meta-item {
+        display: flex;
+        margin-bottom: 0.75rem;
+        font-size: 0.875rem;
+    }
+    .meta-label {
+        color: #9ca3af;
+        width: 100px;
+        flex-shrink: 0;
+    }
+    .meta-value {
+        color: #e5e7eb;
+        font-weight: 500;
+    }
+    .badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 9999px;
+        font-size: 0.75rem;
+        font-weight: 500;
+        margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+    }
+    .badge-blue {
+        background-color: rgba(37, 99, 235, 0.1);
+        color: #60a5fa;
+    }
+    .badge-green {
+        background-color: rgba(16, 185, 129, 0.1);
+        color: #34d399;
+    }
+    .badge-amber {
+        background-color: rgba(245, 158, 11, 0.1);
+        color: #fbbf24;
+    }
+    .card-footer {
+        padding: 0.75rem 1.5rem 1.25rem;
+        border-top: 1px solid #1f2937;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .date {
+        font-size: 0.75rem;
+        color: #6b7280;
+    }
+    .view-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.5rem 1rem;
+        background-color: rgba(59, 130, 246, 0.1);
+        color: #60a5fa;
+        border-radius: 0.375rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        transition: all 0.2s;
+    }
+    .view-btn:hover {
+        background-color: rgba(59, 130, 246, 0.2);
+        color: #3b82f6;
+    }
+    .view-btn svg {
+        width: 1rem;
+        height: 1rem;
+        margin-left: 0.5rem;
+    }
+    .no-swaps {
+        text-align: center;
+        padding: 3rem 1rem;
+        grid-column: 1 / -1;
+    }
+    .no-swaps p {
+        color: #9ca3af;
+        font-size: 1.125rem;
+        margin-bottom: 1.5rem;
+    }
+    .create-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 0.75rem 1.5rem;
+        background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+        color: white;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    .create-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+    .create-btn svg {
+        width: 1.25rem;
+        height: 1.25rem;
+        margin-right: 0.5rem;
+    }
+    @media (max-width: 640px) {
+        .swaps-grid {
+            grid-template-columns: 1fr;
+        }
+        .page-header h1 {
+            font-size: 1.875rem;
+        }
+        .page-header p {
+            font-size: 1rem;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // AI Search Modal Functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const aiSearchBtn = document.getElementById('aiSearchBtn');
+        const aiSearchModal = document.getElementById('aiSearchModal');
+        const aiSearchModalClose = document.getElementById('aiSearchModalClose');
+        const aiSearchCancel = document.getElementById('aiSearchCancel');
+        const aiSearchForm = document.getElementById('aiSearchForm');
+        const currentLocationInput = document.getElementById('currentLocation');
+        const aiSearchSubmit = document.getElementById('aiSearchSubmit');
+        const aiSearchLoading = document.getElementById('aiSearchLoading');
+        
+        // Open modal
+        if (aiSearchBtn) {
+            aiSearchBtn.addEventListener('click', function() {
+                aiSearchModal.style.display = 'flex';
+                currentLocationInput.focus();
+            });
+        }
+        
+        // Close modal
+        function closeModal() {
+            aiSearchModal.style.display = 'none';
+        }
+        
+        if (aiSearchModalClose) {
+            aiSearchModalClose.addEventListener('click', closeModal);
+        }
+        
+        if (aiSearchCancel) {
+            aiSearchCancel.addEventListener('click', closeModal);
+        }
+        
+        // Close modal when clicking outside the content
+        window.addEventListener('click', function(event) {
+            if (event.target === aiSearchModal) {
+                closeModal();
+            }
+        });
+        
+        // Enable/disable submit button based on input
+        if (currentLocationInput) {
+            currentLocationInput.addEventListener('input', function() {
+                aiSearchSubmit.disabled = !this.value.trim();
+            });
+        }
+        
+        // Handle form submission
+        if (aiSearchForm) {
+            aiSearchForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const location = currentLocationInput.value.trim();
+                const radius = document.getElementById('searchRadius').value;
+                
+                if (!location) return;
+                
+                // Show loading state
+                aiSearchSubmit.disabled = true;
+                aiSearchLoading.classList.remove('hidden');
+                
+                // Simulate API call (replace with actual implementation)
+                setTimeout(() => {
+                    console.log('Searching for swaps near:', location, 'within', radius, 'km');
+                    
+                    // Reset form and close modal
+                    aiSearchForm.reset();
+                    aiSearchLoading.classList.add('hidden');
+                    aiSearchSubmit.disabled = false;
+                    closeModal();
+                    
+                    // Show success message (replace with actual results display)
+                    alert('Search functionality will be implemented in the next update.\n\n' +
+                          'Your search:\n' +
+                          'Location: ' + location + '\n' +
+                          'Radius: ' + radius + ' km');
+                }, 1500);
+            });
+        }
+    });
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="swaps-container">
+    <div class="page-header">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1>Available Swaps</h1>
+                <p>Browse through the latest swap requests from teachers across Kenya. Find your perfect match today!</p>
+            </div>
+            <button id="aiSearchBtn" class="ai-search-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Find Swaps Near Me
+            </button>
+        </div>
+    </div>
+    
+    <!-- AI Search Modal -->
+    <div id="aiSearchModal" class="ai-modal">
+        <div class="ai-modal-content">
+            <div class="ai-modal-header">
+                <h3>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Find Swaps by Location
+                </h3>
+                <button class="ai-modal-close" id="aiSearchModalClose">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            </div>
+            <div class="ai-modal-body">
+                <p>Enter your current location or a target location to find the closest available swaps. Our AI will analyze the distance and show you the most relevant matches.</p>
+                
+                <form id="aiSearchForm" class="ai-search-form">
+                    <div class="form-group">
+                        <label for="currentLocation">Your Current Location</label>
+                        <input type="text" id="currentLocation" placeholder="e.g., Nairobi CBD, Mombasa Road, etc." autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="searchRadius">Search Radius (km)</label>
+                        <select id="searchRadius" class="w-full p-2 rounded-md bg-gray-800 border border-gray-700 text-white">
+                            <option value="5">5 km</option>
+                            <option value="10" selected>10 km</option>
+                            <option value="25">25 km</option>
+                            <option value="50">50 km</option>
+                            <option value="100">100 km</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="ai-modal-footer">
+                <button id="aiSearchCancel" class="ai-search-cancel">Cancel</button>
+                <button id="aiSearchSubmit" class="ai-search-submit" disabled>
+                    <span class="flex items-center gap-2">
+                        <span>Find Swaps</span>
+                        <svg id="aiSearchLoading" class="animate-spin h-4 w-4 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Form -->
+    <form method="get" class="filter-form" id="filterForm">
+        <h3>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+            </svg>
+            Filter Swaps
+        </h3>
+        <div class="filter-grid">
+            <div class="form-group">
+                <label for="county">County</label>
+                <select name="county" id="county" class="form-control" onchange="updateConstituencies()">
+                    <option value="">All Counties</option>
+                    {% for county in counties %}
+                        <option value="{{ county.id }}" {% if selected_county == county.id|stringformat:'s' %}selected{% endif %}>
+                            {{ county.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="constituency">Constituency</label>
+                <select name="constituency" id="constituency" class="form-control" onchange="updateWards()" {% if not selected_county %}disabled{% endif %}>
+                    <option value="">All Constituencies</option>
+                    {% for constituency in constituencies %}
+                        <option value="{{ constituency.id }}" {% if selected_constituency == constituency.id|stringformat:'s' %}selected{% endif %}>
+                            {{ constituency.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="ward">Ward</label>
+                <select name="ward" id="ward" class="form-control" {% if not selected_constituency %}disabled{% endif %}>
+                    <option value="">All Wards</option>
+                    {% for ward in wards %}
+                        <option value="{{ ward.id }}" {% if selected_ward == ward.id|stringformat:'s' %}selected{% endif %}>
+                            {{ ward.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <div class="filter-actions">
+            <a href="{% url 'home:all_swaps' %}" class="btn btn-outline">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                Reset
+            </a>
+            <button type="submit" class="btn btn-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                </svg>
+                Apply Filters
+            </button>
+        </div>
+    </form>
+
+    {% if swaps %}
+        <div class="swaps-grid">
+            {% for swap in swaps %}
+                <div class="swap-card">
+                    <div class="card-header">
+                        <h3>
+                            {% if swap.gender == 'M' %}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-blue-400 inline" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                </svg>
+                            {% else %}
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-pink-400 inline" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                </svg>
+                            {% endif %}
+                            {{ swap.get_gender_display }} Teacher
+                        </h3>
+                        <div class="location">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            {{ swap.county }}{% if swap.constituency %}, {{ swap.constituency }}{% endif %}{% if swap.ward %}, {{ swap.ward }}{% endif %}
+                        </div>
+                        <div class="flex flex-wrap">
+                            <span class="badge {% if swap.boarding == 'B' %}badge-blue{% else %}badge-green{% endif %}">
+                                {{ swap.get_boarding_display }}
+                            </span>
+                            <span class="badge badge-amber">
+                                {{ swap.get_employment_terms_display }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="meta-item">
+                            <span class="meta-label">Current School:</span>
+                            <span class="meta-value">{{ swap.current_school.name|default:"Not specified" }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Preferred Subject:</span>
+                            <span class="meta-value">{{ swap.preferred_subject|default:"Any" }}</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Reason:</span>
+                            <span class="meta-value">{{ swap.reason|truncatechars:50|default:"Not specified" }}</span>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <span class="date">Posted {{ swap.created_at|timesince }} ago</span>
+                        <a href="{% url 'home:swap_detail' swap.id %}" class="view-btn">
+                            View Details
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                            </svg>
+                        </a>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="no-swaps">
+            <p>No swap requests found. Be the first to create one!</p>
+            <a href="{% url 'home:create_swap' %}" class="create-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Create Swap Request
+            </a>
+        </div>
+    {% endif %}
+    
+    <script>
+        // Function to update form with current selections
+        function updateFormSelections() {
+            const form = document.getElementById('filterForm');
+            const countySelect = document.getElementById('county');
+            const constituencySelect = document.getElementById('constituency');
+            
+            // Remove any existing hidden inputs to prevent duplicates
+            const existingHiddenInputs = form.querySelectorAll('input[type="hidden"]');
+            existingHiddenInputs.forEach(input => input.remove());
+            
+            // Add current selections as hidden inputs
+            if (countySelect && countySelect.value) {
+                const countyInput = document.createElement('input');
+                countyInput.type = 'hidden';
+                countyInput.name = 'county';
+                countyInput.value = countySelect.value;
+                form.appendChild(countyInput);
+            }
+            
+            if (constituencySelect && constituencySelect.value) {
+                const constituencyInput = document.createElement('input');
+                constituencyInput.type = 'hidden';
+                constituencyInput.name = 'constituency';
+                constituencyInput.value = constituencySelect.value;
+                form.appendChild(constituencyInput);
+            }
+        }
+        
+        // Function to update constituencies based on selected county
+        function updateConstituencies() {
+            const countySelect = document.getElementById('county');
+            const constituencySelect = document.getElementById('constituency');
+            const wardSelect = document.getElementById('ward');
+            
+            // Update form with current selections
+            updateFormSelections();
+            
+            // Reset dependent fields
+            if (constituencySelect) {
+                constituencySelect.value = '';
+            }
+            
+            if (wardSelect) {
+                wardSelect.value = '';
+                wardSelect.disabled = true;
+            }
+            
+            // Submit the form to update the page
+            document.getElementById('filterForm').submit();
+        }
+        
+        // Function to update wards based on selected constituency
+        function updateWards() {
+            const wardSelect = document.getElementById('ward');
+            
+            // Update form with current selections
+            updateFormSelections();
+            
+            // Reset ward if constituency changes
+            if (wardSelect) {
+                wardSelect.value = '';
+            }
+            
+            // Submit the form to update the page
+            document.getElementById('filterForm').submit();
+        }
+        
+        // Initialize form state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const countySelect = document.getElementById('county');
+            const constituencySelect = document.getElementById('constituency');
+            const wardSelect = document.getElementById('ward');
+            const form = document.getElementById('filterForm');
+            
+            // Enable/disable fields based on initial state
+            if (countySelect && countySelect.value) {
+                if (constituencySelect) {
+                    constituencySelect.disabled = false;
+                    if (constituencySelect.value && wardSelect) {
+                        wardSelect.disabled = false;
+                    }
+                }
+            }
+            
+            // Add change event listeners if elements exist
+            if (countySelect) {
+                countySelect.addEventListener('change', updateConstituencies);
+            }
+            if (constituencySelect) {
+                constituencySelect.addEventListener('change', updateWards);
+            }
+            
+            // Update form with current selections before submission
+            if (form) {
+                form.addEventListener('submit', function(e) {
+                    updateFormSelections();
+                });
+            }
+        });
+    </script>
+</div>
+{% endblock %}
+
+

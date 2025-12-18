@@ -1,0 +1,177 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Complete Your Profile - TravelsKe{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-blue-50 via-white to-teal-50 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md mx-auto">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Complete Your Profile</h1>
+            <p class="text-gray-600">We just need a few more details</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+            <form method="post" id="profileForm">
+                {% csrf_token %}
+                
+                <div class="space-y-6">
+                    <div>
+                        <label for="id_number" class="block text-sm font-medium text-gray-700 mb-2">
+                            National ID Number
+                        </label>
+                        <input type="text" 
+                               id="id_number" 
+                               name="id_number" 
+                               value="{{ id_number|default:'' }}"
+                               required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200"
+                               placeholder="Enter your ID number">
+                    </div>
+                    
+                    <div>
+                        <label for="first_name" class="block text-sm font-medium text-gray-700 mb-2">
+                            First Name
+                        </label>
+                        <input type="text" 
+                               id="first_name" 
+                               name="first_name" 
+                               value="{{ first_name|default:'' }}"
+                               required
+                               class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200"
+                               placeholder="Enter your first name">
+                    </div>
+                    
+                    <div>
+                        <button type="submit" 
+                                class="w-full bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition duration-200">
+                            Verify with TSC Records
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <!-- Verification Modal -->
+            {% if show_verification_modal %}
+            <div id="verificationModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div class="bg-white rounded-xl p-8 max-w-md w-full mx-4">
+                    <div class="text-center">
+                        <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                            </svg>
+                        </div>
+                        <h3 class="text-xl font-bold text-gray-900 mb-2">Verification Successful</h3>
+                        <p class="text-gray-600 mb-6">We've verified your details with TSC</p>
+                        
+                        <div class="bg-gray-50 p-4 rounded-lg mb-6 text-left">
+                            <div class="flex justify-between py-2 border-b">
+                                <span class="font-medium text-gray-700">Full Name:</span>
+                                <span class="text-gray-900">{{ kra_data.name }}</span>
+                            </div>
+                            <div class="flex justify-between py-2">
+                                <span class="font-medium text-gray-700">ID Number:</span>
+                                <span class="text-gray-900">{{ kra_data.id_number }}</span>
+                            </div>
+                        </div>
+                        
+                        <form method="post" id="verifyForm">
+                            {% csrf_token %}
+                            <input type="hidden" name="verify_kra" value="true">
+                            <input type="hidden" name="id_number" value="{{ id_number }}">
+                            <input type="hidden" name="first_name" value="{{ first_name }}">
+                            
+                            <button type="submit" 
+                                    class="w-full bg-teal-600 text-white py-3 px-4 rounded-lg hover:bg-teal-700 transition duration-200 mb-3">
+                                Save and Continue
+                            </button>
+                            <button type="button" 
+                                    onclick="document.getElementById('verificationModal').classList.add('hidden')" 
+                                    class="w-full bg-white border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition duration-200">
+                                Cancel
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <script>
+                // Show modal when page loads
+                document.addEventListener('DOMContentLoaded', function() {
+                    document.getElementById('verificationModal').classList.remove('hidden');
+                });
+            </script>
+            {% endif %}
+            
+            <script>
+                // Handle form submission
+                document.getElementById('profileForm').addEventListener('submit', function(e) {
+                    // Form will submit normally - server will handle verification
+                });
+            </script>
+        </div>
+    </div>
+        </div>
+
+       
+        <!-- Skip Option -->
+        <div class="text-center mt-6">
+            <a href="" class="text-gray-500 hover:text-gray-700">
+                Skip for now
+            </a>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const counties = [
+        'Mombasa', 'Kwale', 'Kilifi', 'Tana River', 'Lamu', 'Taita Taveta', 'Garissa', 'Wajir', 'Mandera', 'Marsabit', 'Isiolo', 'Meru', 'Tharaka Nithi', 'Embu', 'Kitui', 'Machakos', 'Makueni', 'Nyandarua', 'Nyeri', 'Kirinyaga', 'Murang\'a', 'Kiambu', 'Turkana', 'West Pokot', 'Samburu', 'Trans Nzoia', 'Uasin Gishu', 'Elgeyo Marakwet', 'Nandi', 'Baringo', 'Laikipia', 'Nakuru', 'Narok', 'Kajiado', 'Kericho', 'Bomet', 'Kakamega', 'Vihiga', 'Bungoma', 'Busia', 'Siaya', 'Kisumu', 'Homa Bay', 'Migori', 'Kisii', 'Nyamira', 'Nairobi'
+    ];
+    
+    const locationInput = document.getElementById('location');
+    const countyList = document.getElementById('countyList');
+    const countySearch = document.getElementById('countySearch');
+    const countyOptions = document.getElementById('countyOptions');
+    
+    // Populate counties
+    function populateCounties(filteredCounties = counties) {
+        countyOptions.innerHTML = '';
+        filteredCounties.forEach(county => {
+            const div = document.createElement('div');
+            div.className = 'county-item';
+            div.textContent = county;
+            div.addEventListener('click', function() {
+                locationInput.value = county;
+                countyList.classList.remove('show');
+            });
+            countyOptions.appendChild(div);
+        });
+    }
+    
+    // Show dropdown
+    locationInput.addEventListener('click', function() {
+        countyList.classList.toggle('show');
+        countySearch.focus();
+    });
+    
+    // Search functionality
+    countySearch.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const filtered = counties.filter(county => 
+            county.toLowerCase().includes(searchTerm)
+        );
+        populateCounties(filtered);
+    });
+    
+    // Hide dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        if (!e.target.closest('.county-dropdown')) {
+            countyList.classList.remove('show');
+        }
+    });
+    
+    // Initial population
+    populateCounties();
+});
+</script>
+{% endblock %} 

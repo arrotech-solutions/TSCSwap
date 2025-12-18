@@ -1,0 +1,538 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Edit Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Dark theme form styles */
+    .form-input, .form-select, .form-textarea {
+        width: 100%;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        border: 1px solid #4b5563;
+        background-color: #374151;
+        color: #e5e7eb;
+    }
+    
+    .form-input:focus, .form-select:focus, .form-textarea:focus {
+        outline: none;
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+    }
+    
+    .form-label {
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #d1d5db;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-helper {
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: #9ca3af;
+    }
+    
+    .form-error {
+        margin-top: 0.25rem;
+        font-size: 0.75rem;
+        color: #f87171;
+    }
+    
+    /* Custom file input */
+    .file-input {
+        display: none;
+    }
+    
+    .file-label {
+        cursor: pointer;
+        background-color: #374151;
+        color: white;
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        transition: background-color 0.2s;
+    }
+    
+    .file-label:hover {
+        background-color: #4b5563;
+    }
+    
+    /* Checkbox and radio styles */
+    .form-radio, .form-checkbox {
+        width: 1rem;
+        height: 1rem;
+        color: #2563eb;
+        background-color: #374151;
+        border-color: #4b5563;
+    }
+    
+    .form-radio:focus, .form-checkbox:focus {
+        --tw-ring-color: rgba(59, 130, 246, 0.5);
+        --tw-ring-offset-shadow: var(--tw-ring-inset) 0 0 0 var(--tw-ring-offset-width) var(--tw-ring-offset-color);
+        --tw-ring-shadow: var(--tw-ring-inset) 0 0 0 calc(2px + var(--tw-ring-offset-width)) var(--tw-ring-color);
+        box-shadow: var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow, 0 0 #0000);
+    }
+    
+    /* Button styles */
+    .btn-primary {
+        background-color: #2563eb;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-primary:hover {
+        background-color: #1d4ed8;
+    }
+    
+    .btn-secondary {
+        background-color: #4b5563;
+        color: white;
+        padding: 0.5rem 1.5rem;
+        border-radius: 0.5rem;
+        font-weight: 500;
+        transition: background-color 0.2s;
+    }
+    
+    .btn-secondary:hover {
+        background-color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gradient-to-br from-gray-900 to-slate-900 py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-2xl mx-auto">
+        <!-- Page Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-white mb-3">
+                {% if messages %}
+                    {% for message in messages %}
+                        {% if forloop.first %}{{ message }}{% endif %}
+                    {% endfor %}
+                {% else %}
+                    Complete Your Profile
+                {% endif %}
+            </h1>
+            <p class="text-gray-400">
+                {% if messages %}
+                    Please complete your profile to start getting swap opportunities
+                {% else %}
+                    Update your personal information and account details
+                {% endif %}
+            </p>
+        </div>
+        
+        {% if messages %}
+        <div class="bg-yellow-900 bg-opacity-20 border-l-4 border-yellow-500 p-4 mb-6 rounded">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm text-yellow-200">
+                        Please complete your profile by adding your phone number and TSC number to start getting swap opportunities.
+                    </p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Edit Form -->
+        <div class="bg-gray-800 rounded-2xl shadow-lg p-6 sm:p-8 border border-gray-700">
+            <form method="post" enctype="multipart/form-data" class="space-y-6">
+                {% csrf_token %}
+                
+                <!-- Personal Information Section -->
+                <div class="space-y-4">
+                    <h2 class="text-xl font-semibold text-gray-200 mb-4">Personal Information</h2>
+                    
+                    <!-- First Name -->
+                    <div>
+                        <label for="{{ form.first_name.id_for_label }}" class="form-label">
+                            First Name
+                        </label>
+                        <input type="text" 
+                               id="{{ form.first_name.id_for_label }}" 
+                               name="{{ form.first_name.name }}" 
+                               value="{{ form.first_name.value|default:'' }}"
+                               class="form-input"
+                               placeholder="Enter your first name">
+                        {% if form.first_name.errors %}
+                            <div class="form-error">
+                                {% for error in form.first_name.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Last Name -->
+                    <div>
+                        <label for="{{ form.last_name.id_for_label }}" class="form-label">
+                            Last Name
+                        </label>
+                        <input type="text" 
+                               id="{{ form.last_name.id_for_label }}" 
+                               name="{{ form.last_name.name }}" 
+                               value="{{ form.last_name.value|default:'' }}"
+                               class="form-input"
+                               placeholder="Enter your last name">
+                        {% if form.last_name.errors %}
+                            <div class="form-error">
+                                {% for error in form.last_name.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Account Information Section -->
+                <div class="space-y-4 pt-6 border-t border-gray-700">
+                    <h2 class="text-xl font-semibold text-gray-200 mb-4">Account Information</h2>
+                    
+                    <!-- Email -->
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                            Email Address
+                        </label>
+                        <input type="email" 
+                               id="{{ form.email.id_for_label }}" 
+                               name="{{ form.email.name }}" 
+                               value="{{ form.email.value|default:'' }}"
+                               class="form-input"
+                               placeholder="your.email@example.com">
+                        {% if form.email.errors %}
+                            <div class="form-error">
+                                {% for error in form.email.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="form-helper">This will be used for login and notifications</p>
+                    </div>
+                    
+                    <!-- Phone Number -->
+                    <div class="{% if form.phone.errors %}bg-red-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-red-500{% endif %}">
+                        <div class="flex items-center justify-between">
+                            <label for="{{ form.phone.id_for_label }}" class="form-label">
+                                Phone Number <span class="text-red-400">*</span>
+                            </label>
+                            {% if form.phone.errors %}
+                                <span class="text-sm text-red-400">Required</span>
+                            {% endif %}
+                        </div>
+                        <input type="tel" 
+                               id="{{ form.phone.id_for_label }}" 
+                               name="{{ form.phone.name }}" 
+                               value="{{ form.phone.value|default:'' }}"
+                               class="form-input {% if form.phone.errors %}border-red-500{% endif %}"
+                               placeholder="e.g. +254 712 345678">
+                        {% if form.phone.errors %}
+                            <div class="form-error">
+                                {% for error in form.phone.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="form-helper">{{ form.phone.help_text }}</p>
+                    </div>
+                    
+                    <!-- Gender -->
+                    <div class="{% if form.gender.errors %}bg-red-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-red-500{% else %}mb-6{% endif %}">
+                        <div class="flex items-center justify-between">
+                            <span class="form-label">
+                                Gender <span class="text-red-400">*</span>
+                            </span>
+                            {% if form.gender.errors %}
+                                <span class="text-sm text-red-400">Required</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mt-3 flex flex-wrap gap-6">
+                            {% for choice in form.gender %}
+                                <label for="{{ choice.id_for_label }}" class="inline-flex items-center cursor-pointer">
+                                    <input type="radio" 
+                                           name="{{ form.gender.name }}" 
+                                           value="{{ choice.data.value }}" 
+                                           id="{{ choice.id_for_label }}"
+                                           class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-600 bg-gray-700"
+                                           {% if choice.data.selected %}checked{% endif %}>
+                                    <span class="ml-2 text-gray-300">
+                                        {{ choice.choice_label }}
+                                    </span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if form.gender.errors %}
+                            <div class="mt-2 text-sm text-red-400">
+                                {% for error in form.gender.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        
+                        {% if form.gender.help_text %}
+                            <p class="mt-2 text-sm text-gray-400">{{ form.gender.help_text }}</p>
+                        {% endif %}
+                    </div>
+                    
+                    <!-- Profile Picture -->
+                    <div class="pt-4">
+                        <label class="form-label">
+                            Profile Picture
+                        </label>
+                        <div class="mt-2 flex items-center space-x-4">
+                            <div class="relative group">
+                                <div id="profile-picture-preview" class="h-24 w-24 rounded-full overflow-hidden bg-gray-700 border-2 border-gray-600 flex items-center justify-center">
+                                    {% if user.profile.profile_picture and user.profile.profile_picture.url %}
+                                        <img src="{{ user.profile.profile_picture.url }}" 
+                                             alt="Profile" 
+                                             class="h-full w-full object-cover" 
+                                             id="profile-image-preview"
+                                             onerror="this.onerror=null; this.src='{% static 'img/default-avatar.png' %}'">
+                                    {% else %}
+                                        <div class="h-full w-full flex items-center justify-center text-gray-400">
+                                            <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                            </svg>
+                                        </div>
+                                    {% endif %}
+                                </div>
+                                <div class="absolute inset-0 bg-black bg-opacity-50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <span class="text-white text-xs font-medium">Change</span>
+                                </div>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex items-center space-x-2">
+                                    <label for="{{ form.profile_picture.id_for_label }}" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition duration-200">
+                                        Upload Photo
+                                    </label>
+                                    <input type="file" 
+                                           id="{{ form.profile_picture.id_for_label }}" 
+                                           name="{{ form.profile_picture.name }}" 
+                                           class="hidden"
+                                           accept="image/*">
+                                    {% if user.profile.profile_picture %}
+                                        <button type="button" 
+                                                class="text-red-500 hover:text-red-400 text-sm font-medium"
+                                                onclick="document.getElementById('profile-picture-clear').checked = !document.getElementById('profile-picture-clear').checked; this.nextElementSibling.style.textDecoration = document.getElementById('profile-picture-clear').checked ? 'line-through' : 'none'">
+                                            Remove
+                                        </button>
+                                        <input type="checkbox" 
+                                               name="{{ form.profile_picture.name }}-clear" 
+                                               id="profile-picture-clear" 
+                                               class="hidden">
+                                    {% endif %}
+                                </div>
+                                <p class="mt-2 text-xs text-gray-400">JPG, PNG, or GIF (max 2MB)</p>
+                                {% if form.profile_picture.errors %}
+                                    <div class="mt-1 text-sm text-red-400">
+                                        {% for error in form.profile_picture.errors %}
+                                            <p>{{ error }}</p>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- TSC Number -->
+                    <div class="{% if form.tsc_number.errors %}bg-red-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-red-500{% endif %}">
+                        <div class="flex items-center justify-between">
+                            <label for="{{ form.tsc_number.id_for_label }}" class="form-label">
+                                TSC Number <span class="text-red-400">*</span>
+                            </label>
+                            {% if form.tsc_number.errors %}
+                                <span class="text-sm text-red-400">Required</span>
+                            {% endif %}
+                        </div>
+                        <input type="text" 
+                               id="{{ form.tsc_number.id_for_label }}" 
+                               name="{{ form.tsc_number.name }}" 
+                               value="{{ form.tsc_number.value|default:'' }}"
+                               class="form-input"
+                               placeholder="Enter your TSC number">
+                        {% if form.tsc_number.errors %}
+                            <div class="form-error">
+                                {% for error in form.tsc_number.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="form-helper">{{ form.tsc_number.help_text }}</p>
+                    </div>
+                    
+                    <!-- Profile Picture -->
+                    <div>
+                        <label for="{{ form.profile_picture.id_for_label }}" class="block text-sm font-medium text-gray-700 mb-2">
+                            Profile Picture
+                        </label>
+                        {{ form.profile_picture }}
+                        {% if form.profile_picture.errors %}
+                            <div class="mt-1 text-sm text-red-600">
+                                {% for error in form.profile_picture.errors %}
+                                    <p>{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <p class="mt-1 text-sm text-gray-500">Upload a profile picture (JPG, PNG, GIF - max 5MB)</p>
+                        
+                        <!-- Current Profile Picture Preview -->
+                        {% if user.profile_picture %}
+                            <div class="mt-3 flex items-center gap-3">
+                                <img src="{{ user.profile_picture.url }}" alt="Current profile picture" class="w-16 h-16 rounded-full object-cover border-2 border-gray-200">
+                                <span class="text-sm text-gray-600">Current profile picture</span>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <!-- Form Actions -->
+                <div class="flex flex-col sm:flex-row gap-4 pt-6 border-t border-gray-200">
+                    <button type="submit" class="flex-1 bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg font-semibold transition duration-300 shadow-lg hover:shadow-xl flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                        </svg>
+                        Save Changes
+                    </button>
+                    
+                    <a href="{% url 'users:profile' %}" class="flex-1 bg-white border-2 border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 rounded-lg font-semibold transition duration-300 text-center">
+                        Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Additional Actions -->
+        <div class="mt-8 text-center">
+            <p class="text-gray-600 mb-4">Need to change your password?</p>
+            <a href="{% url 'users:password_change' %}" class="inline-flex items-center bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white px-6 py-3 rounded-lg font-semibold transition duration-300 shadow-lg hover:shadow-xl">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7 7m6-7a6 6 0 00-7-7m7 7H3"/>
+                </svg>
+                Change Password
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('{{ form.profile_picture.id_for_label }}');
+    const previewContainer = document.getElementById('profile-picture-preview');
+    const previewImage = document.getElementById('profile-image-preview');
+    const removeButton = document.querySelector('button[onclick*="profile-picture-clear"]');
+    const clearCheckbox = document.getElementById('profile-picture-clear');
+
+    // Handle file selection
+    if (fileInput) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // Check file size (2MB max)
+                if (file.size > 2 * 1024 * 1024) {
+                    alert('File size should not exceed 2MB');
+                    this.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    // Create image preview
+                    if (!previewImage) {
+                        // If no image preview exists, create one
+                        const img = document.createElement('img');
+                        img.id = 'profile-image-preview';
+                        img.className = 'h-full w-full object-cover';
+                        img.alt = 'Profile preview';
+                        previewContainer.innerHTML = '';
+                        previewContainer.appendChild(img);
+                        img.src = e.target.result;
+                    } else {
+                        // Update existing image preview
+                        previewImage.src = e.target.result;
+                    }
+                    
+                    // Show the image and hide the placeholder
+                    previewContainer.classList.remove('bg-gray-700');
+                    
+                    // If there's a remove button, show it
+                    if (removeButton) {
+                        removeButton.style.display = 'inline-flex';
+                    }
+                    
+                    // Uncheck the clear checkbox when a new image is selected
+                    if (clearCheckbox) {
+                        clearCheckbox.checked = false;
+                    }
+                };
+                
+                reader.onerror = function() {
+                    alert('Error reading the file');
+                };
+                
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    // Handle remove button click
+    if (removeButton && clearCheckbox) {
+        removeButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            // Clear the file input
+            if (fileInput) {
+                fileInput.value = '';
+            }
+            
+            // Remove the image preview
+            if (previewImage) {
+                previewImage.remove();
+                // Add back the default avatar
+                previewContainer.innerHTML = `
+                    <div class="h-full w-full flex items-center justify-center text-gray-400">
+                        <svg class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>`;
+                previewContainer.classList.add('bg-gray-700');
+            }
+            
+            // Check the clear checkbox
+            clearCheckbox.checked = true;
+            
+            // Hide the remove button
+            this.style.display = 'none';
+        });
+    }
+    
+    // Show/hide remove button based on clear checkbox state
+    if (clearCheckbox) {
+        clearCheckbox.addEventListener('change', function() {
+            if (removeButton) {
+                removeButton.style.textDecoration = this.checked ? 'line-through' : 'none';
+            }
+        });
+    }
+    
+    // Ensure form has the correct enctype for file uploads
+    const form = document.querySelector('form');
+    if (form && !form.enctype) {
+        form.enctype = 'multipart/form-data';
+    }
+});
+</script>
+{% endblock %}

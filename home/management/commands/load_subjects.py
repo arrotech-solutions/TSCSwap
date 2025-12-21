@@ -73,8 +73,7 @@ class Command(BaseCommand):
                 level, created = Level.objects.get_or_create(
                     name=level_name,
                     defaults={
-                        'code': level_name.upper()[:3],
-                        'description': f'{level_name} level subjects'
+                        'code': level_name.upper()[:3]
                     }
                 )
                 

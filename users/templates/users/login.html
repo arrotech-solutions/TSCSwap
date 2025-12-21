@@ -13,7 +13,7 @@
                 </svg>
             </div>
             <h2 class="text-3xl font-bold text-gray-800 mb-2">Welcome to TSC Swap</h2>
-            <p class="text-gray-600">Sign in to manage your teacher swap requests</p>
+            <p class="text-gray-600">Sign in to manage your teacher transfer requests</p>
         </div>
 
         <!-- Login Form -->
@@ -52,7 +52,12 @@
                 <div>
                     <div class="flex items-center justify-between mb-2">
                         <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-700">
-                            Password
+                            <p class="text-sm text-gray-600">
+                                New to TSC Swap?
+                                <a href="{% url 'users:register' %}" class="font-medium text-blue-600 hover:text-blue-500 transition-colors">
+                                    Create an account
+                                </a>
+                            </p>
                         </label>
                         <a href="{% url 'users:password_reset' %}" class="text-xs text-blue-600 hover:text-blue-500 transition-colors">
                             Forgot password?

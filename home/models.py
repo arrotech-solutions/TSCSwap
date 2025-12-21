@@ -14,6 +14,7 @@ class Curriculum(models.Model):
 class Level(models.Model):
     name = models.CharField(max_length=255)
     code = models.CharField(max_length=255)
+    curriculum = models.ForeignKey(Curriculum,null=True, blank=True, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -96,15 +96,6 @@ def create_school(request):
     })
 
 
-def get_constituencies(request):
-    """API endpoint to get constituencies for a given county."""
-    county_id = request.GET.get('county_id')
-    constituencies = Constituencies.objects.filter(county_id=county_id).order_by('name')
-    return JsonResponse({
-        'constituencies': [{'id': c.id, 'name': c.name} for c in constituencies]
-    })
-
-
 def get_wards(request):
     """API endpoint to get wards for a given constituency."""
     constituency_id = request.GET.get('constituency_id')

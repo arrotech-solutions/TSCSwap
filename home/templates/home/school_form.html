@@ -318,7 +318,7 @@
             }
             
             try {
-                const response = await fetch(`/schools/get-constituencies/?county_id=${countyId}`);
+                const response = await fetch(`/schools/get-constituencies/?county=${countyId}`);
                 const data = await response.json();
                 
                 if (constituencySelect) {

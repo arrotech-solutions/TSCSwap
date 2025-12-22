@@ -764,7 +764,7 @@ def get_constituencies(request):
 
 def get_wards(request):
     """API endpoint to get wards for a given constituency."""
-    constituency_id = request.GET.get('constituency')
+    constituency_id = request.GET.get('constituency_id')
     if not constituency_id:
         return JsonResponse({'error': 'Constituency ID is required'}, status=400)
     

@@ -493,9 +493,9 @@ def select_teaching_info(request):
 @login_required
 def get_subjects_for_level(request, level_id):
     level = get_object_or_404(Level, id=level_id)
-    # Use the correct reverse relation to get subjects for the level
-    subjects = Subject.objects.filter(level=level).values('id', 'name')
-    return JsonResponse(list(subjects), safe=False)
+    # Get subjects for the level and format the response
+    subjects = list(Subject.objects.filter(level=level).values('id', 'name'))
+    return JsonResponse({'subjects': subjects})
 
 @login_required
 def admin_users_view(request):

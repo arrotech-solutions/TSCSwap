@@ -8,62 +8,72 @@ class Command(BaseCommand):
         # Dataset containing level names and their respective subjects
         # Format: {'Level Name': ['Subject1', 'Subject2', ...], ...}
         SUBJECTS_DATA = {
-            'Lower Primary': [
-                'Creative Activities',
-                'CRE',
-                'English Activities',
-                'Environmental Activities',
-                'HRE',
-                'IRE',
-                'Kiswahili',
-                'Mathematics'
-            ],
-            'Upper Primary': [
-                'Agriculture',
-                'Arabic',
-                'Creative Arts',
-                'CRE',
-                'English',
-                'French',
-                'German',
-                'HRE',
-                'Indigenous Language',
-                'IRE',
-                'Kiswahili',
-                'Mandarin',
-                'Mathematics',
-                'Science & Technology',
-                'Social Studies'
-            ],
-            'Junior Secondary': [
-                'Agriculture',
-                'Arabic',
-                'Creative Arts',
-                'CRE',
-                'English',
-                'French',
-                'German',
-                'HRE',
-                'Indigenous Language',
-                'Integrated Science',
-                'IRE',
-                'Kiswahili',
-                'Mandarin',
-                'Mathematics',
-                'Pre-Technical Studies',
-                'Social Studies'
-            ],
-            'Senior Secondary': [
-                'Applied Sciences',
-                'Arts & Sports',
-                'Foreign Languages',
-                'Humanities',
-                'Languages',
-                'Pure Sciences',
-                'Religious Education',
-                'Technical Studies'
-            ]
-        }
+    'Primary School': [
+        # Core
+        'English',
+        'Kiswahili',
+        'Mathematics',
+        'Science',
+        'Social Studies',
+
+        # Religious Education
+        'CRE',
+        'IRE',
+        'HRE',
+
+        # Languages
+        'Indigenous Language',
+        'Arabic',
+
+        # Applied / Creative
+        'Art and Craft',
+        'Music',
+        'Physical Education',
+        'Home Science',
+        'Agriculture'
+    ],
+
+    'Secondary/High School': [
+        # Compulsory
+        'English',
+        'Kiswahili',
+        'Mathematics',
+
+        # Sciences
+        'Biology',
+        'Chemistry',
+        'Physics',
+
+        # Humanities
+        'History',
+        'Geography',
+        'CRE',
+        'IRE',
+        'HRE',
+
+        # Languages
+        'French',
+        'German',
+        'Arabic',
+
+        # Applied / Technical
+        'Business Studies',
+        'Agriculture',
+        'Computer Studies',
+        'Home Science',
+        'Art and Design',
+        'Music',
+        'Physical Education',
+        'Aviation Technology',
+        'Building Construction',
+        'Electricity',
+        'Power Mechanics',
+        'Wood Technology',
+        'Metal Technology',
+        'Drawing and Design'
+    ]
+}
+
         
         created_count = 0
         

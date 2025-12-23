@@ -5,10 +5,11 @@ from django.contrib import messages
 from django.urls import reverse
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponse
 
-from .forms import MySubjectForm, SwapForm, SchoolForm, SwapPreferenceForm
+from .forms import MySubjectForm, SwapForm, SchoolForm, SwapPreferenceForm, FastSwapForm
 from .models import (
     Level, MySubject, Subject, Swaps, User, 
-    SwapRequests, Counties, Constituencies, Wards, Schools, SwapPreference
+    SwapRequests, Counties, Constituencies, Wards, Schools, 
+    SwapPreference, FastSwap
 )
 
 
@@ -100,9 +101,8 @@ def get_wards(request):
     """API endpoint to get wards for a given constituency."""
     constituency_id = request.GET.get('constituency_id')
     wards = Wards.objects.filter(constituency_id=constituency_id).order_by('name')
-    return JsonResponse({
-        'wards': [{'id': w.id, 'name': w.name} for w in wards]
-    })
+    ward_list = [{'id': ward.id, 'name': ward.name} for ward in wards]
+    return JsonResponse({'wards': ward_list})
 
 
 @login_required
@@ -778,6 +778,55 @@ def get_wards(request):
 
 
 @login_required
+@login_required
+def add_fast_swap(request):
+    """
+    View for adding a new FastSwap entry.
+    Only superusers can add new FastSwap entries.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "You don't have permission to add FastSwap entries.")
+        return redirect('home:home')
+
+    if request.method == 'POST':
+        form = FastSwapForm(request.POST)
+        if form.is_valid():
+            try:
+                fast_swap = form.save(commit=False)
+                fast_swap.save()
+                form.save_m2m()  # Save many-to-many fields
+                messages.success(request, 'FastSwap entry added successfully!')
+                return redirect('home:fast_swap_list')
+            except Exception as e:
+                messages.error(request, f'Error saving FastSwap: {str(e)}')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = FastSwapForm()
+    
+    return render(request, 'home/fast_swap_form.html', {
+        'form': form,
+        'title': 'Add FastSwap Entry'
+    })
+
+
+@login_required
+def fast_swap_list(request):
+    """
+    View to list all FastSwap entries.
+    Only superusers can view FastSwap entries.
+    """
+    if not request.user.is_superuser:
+        messages.error(request, "You don't have permission to view FastSwap entries.")
+        return redirect('home:home')
+    
+    fast_swaps = FastSwap.objects.all().order_by('-created_at')
+    return render(request, 'home/fast_swap_list.html', {
+        'fast_swaps': fast_swaps,
+        'title': 'FastSwap Entries'
+    })
+
+
 def swap_preferences(request):
     """
     View to handle user's swap preferences.

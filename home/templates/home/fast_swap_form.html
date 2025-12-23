@@ -1,0 +1,167 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}{{ title }} - TSC Swap{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <div class="max-w-4xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 bg-gradient-to-r from-blue-600 to-teal-600">
+                <h3 class="text-lg leading-6 font-medium text-white">
+                    {{ title }}
+                </h3>
+                <p class="mt-1 max-w-2xl text-sm text-blue-100">
+                    Add a new FastSwap entry for quick teacher transfers.
+                </p>
+            </div>
+            
+            <div class="px-4 py-5 sm:px-6">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="mb-4 p-4 rounded-md {% if message.tags == 'error' %}bg-red-100 text-red-700{% else %}bg-green-100 text-green-700{% endif %}">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Left Column -->
+                        <div class="space-y-4">
+                            <!-- Names -->
+                            <div class="form-group">
+                                <label for="id_names" class="block text-sm font-medium text-gray-700">Full Name</label>
+                                {{ form.names }}
+                                {% if form.names.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.names.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Phone -->
+                            <div class="form-group">
+                                <label for="id_phone" class="block text-sm font-medium text-gray-700">Phone Number</label>
+                                {{ form.phone }}
+                                {% if form.phone.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.phone.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- School -->
+                            <div class="form-group">
+                                <label for="id_school" class="block text-sm font-medium text-gray-700">Current School</label>
+                                {{ form.school }}
+                                {% if form.school.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.school.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Level -->
+                            <div class="form-group">
+                                <label for="id_level" class="block text-sm font-medium text-gray-700">Teaching Level</label>
+                                {{ form.level }}
+                                {% if form.level.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.level.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Right Column -->
+                        <div class="space-y-4">
+                            <!-- Most Preferred County -->
+                            <div class="form-group">
+                                <label for="id_most_preferred" class="block text-sm font-medium text-gray-700">Most Preferred County</label>
+                                {{ form.most_preferred }}
+                                {% if form.most_preferred.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.most_preferred.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Acceptable Counties -->
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Acceptable Counties (Select all that apply)</label>
+                                <div class="space-y-2 max-h-48 overflow-y-auto p-2 border rounded-md">
+                                    {{ form.acceptable_county }}
+                                </div>
+                                {% if form.acceptable_county.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.acceptable_county.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- Subjects -->
+                            <div class="form-group">
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Subjects (Select all that apply)</label>
+                                <div class="space-y-2 max-h-48 overflow-y-auto p-2 border rounded-md">
+                                    {{ form.subjects }}
+                                </div>
+                                {% if form.subjects.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ form.subjects.errors.0 }}</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="pt-5">
+                        <div class="flex justify-end space-x-3">
+                            <a href="{% url 'home:fast_swap_list' %}" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Cancel
+                            </a>
+                            <button type="submit" class="inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                Save FastSwap
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Custom styling for form elements */
+    .form-group {
+        margin-bottom: 1rem;
+    }
+    
+    .form-control, .form-select {
+        display: block;
+        width: 100%;
+        padding: 0.5rem 0.75rem;
+        font-size: 1rem;
+        line-height: 1.5;
+        color: #374151;
+        background-color: #fff;
+        background-clip: padding-box;
+        border: 1px solid #d1d5db;
+        border-radius: 0.375rem;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        border-color: #3b82f6;
+        outline: 0;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+    }
+    
+    /* Style for checkboxes */
+    .form-checkbox {
+        margin-right: 0.5rem;
+    }
+    
+    /* Style for error states */
+    .errorlist {
+        color: #dc2626;
+        margin-top: 0.25rem;
+        font-size: 0.875rem;
+    }
+    
+    /* Make checkboxes and their labels align properly */
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}

@@ -32,6 +32,10 @@ urlpatterns = [
     # User preferences
     path("preferences/", login_required(views.swap_preferences), name="swap_preferences"),
     
+    # FastSwap management
+    path("fast-swap/add/", login_required(views.add_fast_swap), name="add_fast_swap"),
+    path("fast-swap/list/", login_required(views.fast_swap_list), name="fast_swap_list"),
+    
     # School management
     path("schools/", views.all_schools, name="all_schools"),
     path("schools/new/", login_required(views.create_school), name="create_school"),

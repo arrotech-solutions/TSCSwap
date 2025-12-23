@@ -1,5 +1,5 @@
 from django import forms
-from .models import MySubject, Subject, Swaps, Counties, Constituencies, Wards, Schools, Level, Curriculum, SwapPreference
+from .models import MySubject, Subject, Swaps, Counties, Constituencies, Wards, Schools, Level, Curriculum, SwapPreference, FastSwap
 
 
 class MySubjectForm(forms.ModelForm):
@@ -33,6 +33,35 @@ class MySubjectForm(forms.ModelForm):
     class Meta:
         model = MySubject
         fields = ["subject"]
+
+
+class FastSwapForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields['school'].queryset = Schools.objects.all().order_by('name')
+        self.fields['most_preferred'].queryset = Counties.objects.all().order_by('name')
+        self.fields['acceptable_county'].queryset = Counties.objects.all().order_by('name')
+        self.fields['subjects'].queryset = Subject.objects.all().order_by('name')
+        
+        # Make fields required
+        self.fields['names'].required = True
+        self.fields['phone'].required = True
+        self.fields['school'].required = True
+        self.fields['level'].required = True
+        self.fields['subjects'].required = True
+
+    class Meta:
+        model = FastSwap
+        fields = ['names', 'phone', 'school', 'most_preferred', 'acceptable_county', 'level', 'subjects']
+        widgets = {
+            'acceptable_county': forms.CheckboxSelectMultiple(),
+            'subjects': forms.CheckboxSelectMultiple(),
+            'names': forms.TextInput(attrs={'class': 'form-control'}),
+            'phone': forms.TextInput(attrs={'class': 'form-control'}),
+            'school': forms.Select(attrs={'class': 'form-select'}),
+            'most_preferred': forms.Select(attrs={'class': 'form-select'}),
+            'level': forms.Select(attrs={'class': 'form-select'}),
+        }
 
 
 class SwapForm(forms.ModelForm):

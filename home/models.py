@@ -92,6 +92,7 @@ class Schools(models.Model):
     ward = models.ForeignKey(Wards, on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    is_hardship = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -135,16 +136,36 @@ class SwapRequests(models.Model):
 
 
 class SwapPreference(models.Model):
+    Hardship = (
+        ('Yes', 'Yes'),
+        ('No', 'No'),
+        ('Any', 'Any')
+    )
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     desired_county = models.ForeignKey(Counties, null=True, on_delete=models.SET_NULL, related_name='desired_swaps')
     desired_constituency = models.ForeignKey(Constituencies, null=True, on_delete=models.SET_NULL)
     desired_ward = models.ForeignKey(Wards, null=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
+    open_to_all = models.BooleanField(default=False)
+    is_hardship = models.CharField(max_length=255, choices=Hardship, default='Any')
     def __str__(self):
         return f"Preferences for {self.user}"
 
     class Meta:
         verbose_name = "Swap Preference"
         verbose_name_plural = "Swap Preferences"
+
+class FastSwap(models.Model):
+    names = models.CharField(max_length=255)
+    phone = models.CharField(max_length=255)
+    school = models.ForeignKey(Schools, on_delete=models.CASCADE)
+    most_preferred = models.ForeignKey(Counties, on_delete=models.CASCADE, null=True, blank=True)
+    acceptable_county = models.ManyToManyField(Counties, related_name='acceptable_county')
+    level = models.ForeignKey(Level, on_delete=models.CASCADE)
+    subjects = models.ManyToManyField(Subject)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    def __str__(self):
+        return self.names
+    

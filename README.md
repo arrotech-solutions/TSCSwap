@@ -1,2 +1,2 @@
-# TSCSwap Two
+# TSCSwap
 # TSCSwap

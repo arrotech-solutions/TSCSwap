@@ -999,25 +999,39 @@ def high_school_matched_swaps(request):
             teachers_by_county.setdefault(county.id, []).append(teacher)
 
     # Find matches
+    print(f"[DEBUG] Starting to find matches among {len(teachers_list)} teachers")
+    
     for teacher in teachers_list:
         if not hasattr(teacher, 'profile') or not teacher.profile.school:
+            print(f"[DEBUG] Skipping teacher {teacher.id} - missing profile or school")
             continue
             
         current_county = teacher.profile.school.ward.constituency.county
+        if not current_county:
+            print(f"[DEBUG] Skipping teacher {teacher.id} - school has no county")
+            continue
+            
         swap_pref = getattr(teacher, 'swappreference', None)
+        if not swap_pref:
+            print(f"[DEBUG] Skipping teacher {teacher.id} - no swap preferences")
+            continue
         
         # Get teacher's desired counties (from direct county preference and open_to_all)
         desired_counties = set()
         
         # 1. Check direct county preference
         if swap_pref.desired_county:
+            print(f"[DEBUG] Teacher {teacher.id} has direct county preference: {swap_pref.desired_county.name}")
             desired_counties.add(swap_pref.desired_county.id)
         
         # 2. Add open_to_all counties if any
         if hasattr(swap_pref, 'open_to_all'):
+            open_to_all = list(swap_pref.open_to_all.values_list('name', flat=True))
+            print(f"[DEBUG] Teacher {teacher.id} open to these counties: {open_to_all}")
             desired_counties.update(swap_pref.open_to_all.values_list('id', flat=True))
         
         if not desired_counties:
+            print(f"[DEBUG] Skipping teacher {teacher.id} - no desired counties specified")
             continue  # Skip if no desired counties specified
         
         # Find teachers in the desired county who want to come to this teacher's current county
@@ -1074,13 +1088,16 @@ def high_school_matched_swaps(request):
                 ).values_list('name', flat=True)
                 
                 # Found a perfect match!
+                print(f"[DEBUG] Found match between {teacher.id} and {match.id}")
+                print(f"[DEBUG] Common subjects: {list(common_subject_names)}")
+                
                 matched_pairs.append({
                     'teacher_a': teacher,
                     'teacher_b': match,
                     'match_score': 100,  # Perfect match
                     'current_county_a': current_county.name,
                     'desired_county_a': desired_county.name,
-                    'current_county_b': desired_county.name,  # They're swapping
+                    'current_county_b': match.profile.school.ward.constituency.county.name if hasattr(match, 'profile') and hasattr(match.profile, 'school') else 'Unknown',
                     'desired_county_b': current_county.name,  # They're swapping
                     'teacher_a_school': teacher.profile.school.name,
                     'teacher_b_school': match.profile.school.name,

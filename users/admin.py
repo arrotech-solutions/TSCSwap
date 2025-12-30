@@ -184,7 +184,8 @@ get_school_level_wrapper.short_description = 'School Level'
 class MyUserAdmin(admin.ModelAdmin):
     list_display = (
         'email', 
-        'get_full_name', 
+        'get_full_name',
+        'get_phone_number',  # Add phone number to the list display
         get_school_level_wrapper,
         get_school_location_wrapper,
         get_potential_matches_count_wrapper,
@@ -203,6 +204,12 @@ class MyUserAdmin(admin.ModelAdmin):
             'swappreference__open_to_all',
             'mysubject_set__subject'  # Using the default related_name for reverse relation
         )
+    
+    def get_phone_number(self, obj):
+        if hasattr(obj, 'profile') and obj.profile.phone:
+            return obj.profile.phone
+        return "-"
+    get_phone_number.short_description = 'Phone'
     
     # Using wrapper functions instead of class methods
 

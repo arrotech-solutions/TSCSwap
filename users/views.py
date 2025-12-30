@@ -453,14 +453,14 @@ def dashboard(request):
     has_potential_matches = False
     
     # Only show potential matches if profile is 100% complete
-    if not profile_complete:
+    if not all([personal_info_complete, teaching_level_complete, school_info_complete, preferences_complete]):
         potential_matches_message = "Complete your profile to see potential matches. Please complete all profile sections to 100%."
         has_potential_matches = False
-        show_potential_matches_section = False
+        show_potential_matches_section = True
     elif not has_profile or not hasattr(user.profile, 'school') or not user.profile.school:
         potential_matches_message = "Please add your school information to see potential matches."
         has_potential_matches = False
-        show_potential_matches_section = False
+        show_potential_matches_section = True
     else:
         # User has a complete profile with school, find actual matches
         is_secondary = hasattr(user.profile.school, 'level') and ('secondary' in user.profile.school.level.name.lower() or 'high' in user.profile.school.level.name.lower())

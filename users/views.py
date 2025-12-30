@@ -3,6 +3,7 @@ from itertools import combinations
 
 from django.contrib import messages
 from django.contrib.auth import (authenticate, get_user_model, login, logout,
+from home.models import Swaps, SwapRequests
                                update_session_auth_hash)
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm

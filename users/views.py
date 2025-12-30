@@ -1,19 +1,40 @@
+from collections import namedtuple
+from itertools import combinations
+
 from django.contrib import messages
 from django.contrib.auth import (authenticate, get_user_model, login, logout,
-                                 update_session_auth_hash)
-from django.contrib.auth.decorators import login_required
+                               update_session_auth_hash)
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
+from django.db import transaction
+from django.db.models import Q
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
-from django.views.decorators.http import require_POST
+from django.template.loader import render_to_string
+from django.views.decorators.http import require_http_methods, require_GET
 
-from home.models import (Level, MySubject, Subject, SwapPreference,
-                         SwapRequests, Swaps)
-from home.utils import verify_kra_details
+from home.models import Level, Subject, MySubject, Schools, SwapPreference, Counties, Constituencies, Wards
+from .models import MyUser, PersonalProfile
+from .forms import (
+    CustomPasswordChangeForm, MyAuthenticationForm, 
+    MyUserCreationForm, ProfileEditForm, UserEditForm,
+    SubjectSelectionForm
+)
 
-from .forms import (CustomPasswordChangeForm, MyAuthenticationForm,
-                    MyUserCreationForm, ProfileEditForm)
-from .models import PersonalProfile
+# Define a named tuple to hold matched swap information
+MatchedSwap = namedtuple('MatchedSwap', [
+    'teacher_a', 
+    'teacher_a_swap_pref', 
+    'teacher_b', 
+    'teacher_b_swap_pref'
+])
+
+
+def staff_required(login_url=None):
+    """
+    Decorator for views that checks that the user is staff.
+    """
+    return user_passes_test(lambda u: u.is_staff, login_url=login_url)
 
 # Create your views here.
 
@@ -597,3 +618,502 @@ def admin_users_view(request):
     }
     
     return render(request, 'users/admin_users.html', context)
+
+    
+
+
+@login_required
+def admin_edit_user_view(request, user_id):
+    if not request.user.is_staff:
+        return redirect('home:home')
+    
+    user = get_object_or_404(MyUser, id=user_id)
+    profile, created = PersonalProfile.objects.get_or_create(user=user)
+    
+    if request.method == 'POST':
+        # Get the name fields directly from the request
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
+        surname = request.POST.get('surname', '').strip()
+        
+        # Validate required fields
+        if not first_name or not last_name:
+            messages.error(request, "First name and last name are required.")
+        else:
+            try:
+                with transaction.atomic():
+                    # Update only the name fields
+                    profile.first_name = first_name
+                    profile.last_name = last_name
+                    profile.surname = surname
+                    profile.save()
+                    
+                    messages.success(request, 'User information updated successfully.')
+                    return redirect('users:admin_users')
+                    
+            except Exception as e:
+                messages.error(request, f'An error occurred while updating the user: {str(e)}')
+    
+    # For GET requests or if there was an error, show the form
+    context = {
+        'user_being_edited': user,
+        'profile': profile,
+    }
+    return render(request, 'users/admin_edit_user.html', context)
+
+
+@require_GET
+@login_required
+def get_subjects_for_level(request, level_id):
+    """
+    AJAX view to get subjects for a specific level
+    """
+    try:
+        # Get teacher_id from query params
+        teacher_id = request.GET.get('teacher_id')
+        
+        # Validate level_id
+        if level_id == 0 or level_id == '0':
+            subjects = Subject.objects.none()
+        else:
+            try:
+                level = get_object_or_404(Level, id=level_id)
+                subjects = Subject.objects.filter(level=level).order_by('name')
+            except (ValueError, Level.DoesNotExist):
+                return JsonResponse(
+                    {'error': 'Invalid level ID'}, 
+                    status=400
+                )
+        
+        # Get current subject IDs if teacher_id is provided
+        current_subjects = []
+        if teacher_id:
+            try:
+                teacher = MyUser.objects.get(id=teacher_id, role='Teacher')
+                my_subject = MySubject.objects.filter(user=teacher).first()
+                if my_subject:
+                    current_subjects = list(my_subject.subject.values_list('id', flat=True))
+            except (MyUser.DoesNotExist, ValueError):
+                # If teacher doesn't exist or invalid ID, just continue with empty current_subjects
+                pass
+        
+        # Prepare context for the template
+        context = {
+            'subjects': subjects,
+            'current_subjects': current_subjects,
+        }
+        
+        # Render the subjects partial
+        html = render_to_string('users/partials/subject_checkboxes.html', context, request=request)
+        
+        return JsonResponse({'html': html})
+        
+    except Exception as e:
+        import traceback
+        print(f"Error in get_subjects_for_level: {str(e)}\n{traceback.format_exc()}")
+        return JsonResponse(
+            {'error': 'An error occurred while loading subjects'}, 
+            status=500
+        )
+
+
+@login_required
+def manage_teacher_subjects(request, user_id):
+    """
+    View for admin to manage a teacher's subjects and swap preferences.
+    """
+    # Check if user is staff
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to access this page.')
+        return redirect('home:home')
+    
+    try:
+        teacher = get_object_or_404(MyUser, id=user_id, role='Teacher')
+        
+        # Get or create MySubject and SwapPreference for the teacher
+        my_subject, created = MySubject.objects.get_or_create(user=teacher)
+        swap_pref, created = SwapPreference.objects.get_or_create(user=teacher)
+        
+        # Get the teacher's current level, subjects, and swap preferences
+        current_level = teacher.profile.level if hasattr(teacher, 'profile') and teacher.profile else None
+        current_subjects = list(my_subject.subject.all())
+        
+        if request.method == 'POST':
+            try:
+                with transaction.atomic():
+                    # Get selected level and subjects
+                    level_id = request.POST.get('level')
+                    subject_ids = request.POST.getlist('subjects')
+                    
+                    # Update teacher's level if changed
+                    if level_id and level_id != 'None':
+                        level = Level.objects.get(id=level_id)
+                        if hasattr(teacher, 'profile'):
+                            teacher.profile.level = level
+                            teacher.profile.save()
+                    
+                    # Update teacher's subjects
+                    if subject_ids:
+                        new_subjects = Subject.objects.filter(id__in=subject_ids)
+                        my_subject.subject.set(new_subjects)
+                    else:
+                        my_subject.subject.clear()
+                    
+                    # Update school if provided
+                    school_id = request.POST.get('school')
+                    if hasattr(teacher, 'profile'):
+                        if school_id:
+                            school = Schools.objects.get(id=school_id)
+                            teacher.profile.school = school
+                            teacher.profile.save()
+                        else:
+                            teacher.profile.school = None
+                            teacher.profile.save()
+                    
+                    # Update swap preferences
+                    swap_pref.desired_county_id = request.POST.get('desired_county') or None
+                    swap_pref.desired_constituency_id = request.POST.get('desired_constituency') or None
+                    swap_pref.desired_ward_id = request.POST.get('desired_ward') or None
+                    swap_pref.is_hardship = request.POST.get('is_hardship', 'Any')
+                    
+                    # Update open_to_all counties
+                    open_to_all_counties = request.POST.getlist('open_to_all')
+                    swap_pref.open_to_all.set(open_to_all_counties)
+                    
+                    swap_pref.save()
+                    
+                    messages.success(request, 'Teacher information updated successfully.')
+                    return redirect('users:admin_users')
+                    
+            except Exception as e:
+                messages.error(request, f'Error updating teacher information: {str(e)}')
+        
+        # Get all levels and subjects for the dropdowns
+        levels = Level.objects.all().order_by('name')
+        subjects = Subject.objects.all()
+        if current_level:
+            subjects = subjects.filter(level=current_level)
+        
+        # Get location data for the form
+        counties = Counties.objects.all().order_by('name')
+        constituencies = Constituencies.objects.all().order_by('name')
+        wards = Wards.objects.all().order_by('name')
+        
+        # Get the current school if it exists
+        current_school = teacher.profile.school if hasattr(teacher, 'profile') and teacher.profile else None
+        
+        # Get schools for the current ward if available
+        schools = Schools.objects.all().order_by('name')
+        if current_school and current_school.ward:
+            schools = schools.filter(ward=current_school.ward)
+        
+        # Get the IDs of currently selected open_to_all counties
+        open_to_all_county_ids = list(swap_pref.open_to_all.values_list('id', flat=True))
+        
+        context = {
+            'teacher': teacher,
+            'levels': levels,
+            'subjects': subjects.order_by('name'),
+            'current_level': current_level,
+            'current_subjects': [s.id for s in current_subjects],
+            'swap_pref': swap_pref,
+            'counties': counties,
+            'constituencies': constituencies,
+            'wards': wards,
+            'schools': schools,
+            'current_school': current_school,
+            'open_to_all_county_ids': open_to_all_county_ids,
+        }
+        return render(request, 'users/manage_teacher_subjects.html', context)
+        
+    except Exception as e:
+        messages.error(request, f'An error occurred: {str(e)}')
+        return redirect('users:admin_users')
+
+
+@login_required
+@staff_required(login_url='users:login')
+def primary_matched_swaps(request):
+    """
+    View to find perfect location swap matches between primary school teachers.
+    Matches are based on:
+    - Teacher A's current county matches Teacher B's desired county
+    - Teacher B's current county matches Teacher A's desired county
+    """
+    # Debug logging
+    print(f"[DEBUG] primary_matched_swaps - User: {request.user}, is_authenticated: {request.user.is_authenticated}, is_staff: {request.user.is_staff}")
+    
+    # Check if user is staff (double check)
+    if not request.user.is_staff:
+        print("[DEBUG] User is not staff, will redirect to login")
+        from django.contrib.auth.views import redirect_to_login
+        return redirect_to_login(request.get_full_path(), login_url='users:login')
+    
+    print("[DEBUG] User is staff, proceeding with view")
+        
+    # Get all active teachers with their profiles and swap preferences
+    print("[DEBUG] Fetching teachers with profiles, schools, and swap preferences")
+    teachers = MyUser.objects.filter(
+        is_active=True,
+        role='Teacher',
+        profile__isnull=False,
+        profile__school__isnull=False,
+        swappreference__isnull=False  # Only teachers with swap preferences
+    ).select_related(
+        'profile__school__ward__constituency__county',
+        'swappreference__desired_county',  # Direct county reference
+        'profile__school__level'
+    ).prefetch_related(
+        'swappreference__open_to_all'
+    )
+    
+    print(f"[DEBUG] Found {teachers.count()} teachers with profiles, schools, and swap preferences")
+    
+    # Debug: Print first few teachers' school levels
+    for i, t in enumerate(teachers[:3]):  # Print first 3 for debugging
+        if hasattr(t, 'profile') and hasattr(t.profile, 'school') and t.profile.school:
+            level = getattr(t.profile.school, 'level', None)
+            print(f"[DEBUG] Teacher {i+1} school level: {level}")
+        else:
+            print(f"[DEBUG] Teacher {i+1} missing profile or school")
+    
+    # Filter for primary school teachers
+    primary_teachers = []
+    for t in teachers:
+        try:
+            if (hasattr(t, 'profile') and 
+                hasattr(t.profile, 'school') and 
+                t.profile.school and 
+                hasattr(t.profile.school, 'level') and 
+                t.profile.school.level and 
+                t.profile.school.level.name.lower() == 'primary'):
+                primary_teachers.append(t)
+        except Exception as e:
+            print(f"[DEBUG] Error processing teacher {t.id}: {str(e)}")
+    
+    print(f"[DEBUG] Found {len(primary_teachers)} primary school teachers with swap preferences")
+    
+    if not primary_teachers:
+        msg = "No primary school teachers with swap preferences found."
+        print(f"[DEBUG] {msg}")
+        messages.warning(request, msg)
+        return render(request, 'users/primary_matched_swaps.html', {
+            'matched_pairs': [],
+            'total_matches': 0,
+            'error_message': msg
+        })
+
+    matched_pairs = []
+    processed_pairs = set()  # To avoid duplicate matches
+
+    # Convert to list to avoid multiple database queries
+    teachers_list = list(teachers)
+
+    # Create a dictionary to store teachers by their current county
+    teachers_by_county = {}
+    for teacher in teachers_list:
+        if not hasattr(teacher, 'profile') or not teacher.profile.school:
+            continue
+            
+        county = teacher.profile.school.ward.constituency.county
+        if county:
+            teachers_by_county.setdefault(county.id, []).append(teacher)
+
+    # Find matches
+    for teacher in teachers_list:
+        if not hasattr(teacher, 'profile') or not teacher.profile.school:
+            continue
+            
+        current_county = teacher.profile.school.ward.constituency.county
+        swap_pref = getattr(teacher, 'swappreference', None)
+        
+        if not swap_pref or not swap_pref.desired_ward:
+            continue
+            
+        desired_county = swap_pref.desired_ward.constituency.county
+        
+        # Find teachers in the desired county who want to come to this teacher's current county
+        potential_matches = teachers_by_county.get(desired_county.id, []) if desired_county else []
+        
+        for match in potential_matches:
+            if match == teacher or match.id in processed_pairs:
+                continue
+@staff_required(login_url='users:login')
+def high_school_matched_swaps(request):
+    """
+    View to find perfect location and subject swap matches between high school teachers.
+    Matches are based on:
+    - Teacher A's current county matches Teacher B's desired county
+    - Teacher B's current county matches Teacher A's desired county
+    - Both teachers teach at least one common subject
+    """
+    print(f"[DEBUG] high_school_matched_swaps - User: {request.user}")
+    
+    # Get the high school level object
+    try:
+        high_school_level = Level.objects.get(name__iexact='secondary')
+    except Level.DoesNotExist:
+        try:
+            high_school_level = Level.objects.get(name__iexact='high school')
+        except Level.DoesNotExist:
+            messages.error(request, "High school level not found in the system. Please add it first.")
+            return redirect('users:admin_users')
+
+    # Get all active high school teachers with their profiles, schools, and subjects
+    teachers = MyUser.objects.filter(
+        is_active=True,
+        role='Teacher',
+        profile__isnull=False,
+        profile__school__isnull=False,
+        profile__school__level=high_school_level,
+        swappreference__isnull=False
+    ).select_related(
+        'profile__school__ward__constituency__county',
+        'swappreference__desired_county'  # Only need county-level preference
+    ).prefetch_related(
+        'swappreference__open_to_all',
+        'mysubject_set__subject'
+    ).distinct()
+
+    matched_pairs = []
+    processed_pairs = set()
+    teachers_list = list(teachers)
+    
+    print(f"[DEBUG] Found {len(teachers_list)} high school teachers with swap preferences")
+
+    # Create a dictionary to store teachers by their current county
+    teachers_by_county = {}
+    for teacher in teachers_list:
+        if not hasattr(teacher, 'profile') or not teacher.profile.school:
+            continue
+            
+        county = teacher.profile.school.ward.constituency.county
+        if county:
+            teachers_by_county.setdefault(county.id, []).append(teacher)
+
+    # Find matches
+    for teacher in teachers_list:
+        if not hasattr(teacher, 'profile') or not teacher.profile.school:
+            continue
+            
+        current_county = teacher.profile.school.ward.constituency.county
+        swap_pref = getattr(teacher, 'swappreference', None)
+        
+        # Get teacher's desired counties (from direct county preference and open_to_all)
+        desired_counties = set()
+        
+        # 1. Check direct county preference
+        if swap_pref.desired_county:
+            desired_counties.add(swap_pref.desired_county.id)
+        
+        # 2. Add open_to_all counties if any
+        if hasattr(swap_pref, 'open_to_all'):
+            desired_counties.update(swap_pref.open_to_all.values_list('id', flat=True))
+        
+        if not desired_counties:
+            continue  # Skip if no desired counties specified
+        
+        # Find teachers in the desired county who want to come to this teacher's current county
+        for desired_county_id in desired_counties:
+            potential_matches = teachers_by_county.get(desired_county_id, [])
+            
+            for match in potential_matches:
+                if match == teacher or match.id in processed_pairs:
+                    continue
+                    
+                match_pref = getattr(match, 'swappreference', None)
+                if not match_pref or not match_pref.desired_county:
+                    continue
+                    
+                # Check if the match wants to come to this teacher's current county
+                match_wants_current_county = (
+                    # Direct county match
+                    (match_pref.desired_county and match_pref.desired_county == current_county) or
+                    # Or in open_to_all counties
+                    (hasattr(match_pref, 'open_to_all') and match_pref.open_to_all.filter(id=current_county.id).exists())
+                )
+                
+                if not match_wants_current_county:
+                    continue
+                    
+                # Get teacher's subjects
+                teacher_subjects = set()
+                for my_subject in teacher.mysubject_set.all():
+                    teacher_subjects.update(s.id for s in my_subject.subject.all())
+                
+                if not teacher_subjects:
+                    continue  # Skip teachers with no subjects
+                
+                # Get match's subjects
+                match_subjects = set()
+                for my_subject in match.mysubject_set.all():
+                    match_subjects.update(s.id for s in my_subject.subject.all())
+                
+                # Check for subject overlap
+                common_subjects = teacher_subjects.intersection(match_subjects)
+                if not common_subjects:
+                    continue  # Skip if no common subjects
+                
+                # Create a unique pair ID to avoid duplicates (smaller ID first)
+                pair_id = tuple(sorted([teacher.id, match.id]))
+                if pair_id in processed_pairs:
+                    continue
+                    
+                processed_pairs.add(pair_id)
+                
+                # Get common subject names
+                common_subject_names = Subject.objects.filter(
+                    id__in=common_subjects
+                ).values_list('name', flat=True)
+                
+                # Found a perfect match!
+                matched_pairs.append({
+                    'teacher_a': teacher,
+                    'teacher_b': match,
+                    'match_score': 100,  # Perfect match
+                    'current_county_a': current_county.name,
+                    'desired_county_a': desired_county.name,
+                    'current_county_b': desired_county.name,  # They're swapping
+                    'desired_county_b': current_county.name,  # They're swapping
+                    'teacher_a_school': teacher.profile.school.name,
+                    'teacher_b_school': match.profile.school.name,
+                    'common_subjects': list(common_subject_names)
+                })
+
+    return render(request, 'users/high_school_matched_swaps.html', {
+        'matched_pairs': matched_pairs,
+        'total_matches': len(matched_pairs)
+    })
+
+
+@login_required
+def admin_delete_user_view(request, user_id):
+    """
+    View to delete a user account (admin only).
+    """
+    if not request.user.is_staff:
+        messages.error(request, 'You do not have permission to perform this action.')
+        return redirect('home:home')
+    
+    user_to_delete = get_object_or_404(MyUser, id=user_id)
+    
+    if request.method == 'POST':
+        try:
+            # Soft delete the user
+            user_to_delete.is_active = False
+            user_to_delete.save()
+            
+            # Log out the user if they're deleting their own account
+            if user_to_delete == request.user:
+                logout(request)
+                messages.success(request, 'Your account has been deactivated.')
+                return redirect('users:login')
+                
+            messages.success(request, f'User {user_to_delete.email} has been deactivated.')
+            return redirect('users:admin_users')
+            
+        except Exception as e:
+            messages.error(request, f'Error deactivating user: {str(e)}')
+            return redirect('users:admin_edit_user', user_id=user_id)
+    
+    return render(request, 'users/admin_confirm_delete.html', {'user_to_delete': user_to_delete})

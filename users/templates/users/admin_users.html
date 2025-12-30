@@ -13,6 +13,21 @@
             </div>
         </div>
 
+        <!-- Swap Management Section -->
+        <div class="mb-6 p-4 bg-gray-700 rounded-lg shadow">
+            <h2 class="text-lg font-semibold text-white mb-3">Swap Management</h2>
+            <div class="flex flex-wrap gap-4">
+                <a href="{% url 'users:primary_matched_swaps' %}" 
+                   class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors">
+                    Primary School Swaps
+                </a>
+                <a href="{% url 'users:high_school_matched_swaps' %}" 
+                   class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors">
+                    High School Swaps
+                </a>
+            </div>
+        </div>
+
         <!-- Stats Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             <div class="bg-gray-700 p-4 rounded-lg shadow border-l-4 border-blue-500">
@@ -113,9 +128,13 @@
                                 <span class="px-2 py-1 bg-red-900 text-red-200 text-xs rounded-full">Inactive</span>
                             {% endif %}
                         </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                            <a href="#" class="text-indigo-400 hover:text-indigo-300 mr-3">View</a>
-                            <a href="#" class="text-blue-400 hover:text-blue-300">Edit</a>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                            <a href="{% url 'users:admin_edit_user' user_data.user.id %}" class="text-blue-400 hover:text-blue-300">Edit</a>
+                            {% if user_data.user.role == 'Teacher' %}
+                            <a href="{% url 'users:manage_teacher_subjects' user_data.user.id %}" class="text-green-400 hover:text-green-300">
+                                Manage Subjects
+                            </a>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}

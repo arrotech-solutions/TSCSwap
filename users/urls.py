@@ -17,6 +17,8 @@ urlpatterns = [
     path('password/change/', views.password_change_view, name='password_change'),
     path('dashboard/', views.dashboard, name='dashboard'),
     path('admin/users/', views.admin_users_view, name='admin_users'),
+    path('admin/users/<int:user_id>/edit/', views.admin_edit_user_view, name='admin_edit_user'),
+    path('admin/users/<int:user_id>/delete/', views.admin_delete_user_view, name='admin_delete_user'),
     
     # Django built-in password reset URLs
     path('password-reset/', auth_views.PasswordResetView.as_view(
@@ -43,6 +45,20 @@ urlpatterns = [
     path('teaching-info/', views.select_teaching_info, name='select_teaching_info'),
     
     # API endpoints
+    path('api/levels/<int:level_id>/subjects/', 
+         login_required(views.get_subjects_for_level), 
+         name='get_subjects_for_level'),
+         
+    # Teacher management
+    path('admin/teachers/<int:user_id>/subjects/', 
+         login_required(views.manage_teacher_subjects), 
+         name='manage_teacher_subjects'),
+    path('admin/primary-matched-swaps/', 
+         login_required(views.primary_matched_swaps), 
+         name='primary_matched_swaps'),
+    path('admin/high-school-matched-swaps/', 
+         login_required(views.high_school_matched_swaps), 
+         name='high_school_matched_swaps'),
     path('api/levels/<int:level_id>/subjects/', 
          login_required(views.get_subjects_for_level), 
          name='get_subjects_for_level'),

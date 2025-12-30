@@ -1,0 +1,29 @@
+{% if subjects.exists %}
+<div class="space-y-2">
+    <label class="block text-sm font-medium text-gray-300 mb-1">Subjects</label>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+        {% for subject in subjects %}
+        <div class="flex items-center">
+            <input type="checkbox" name="subjects" 
+                   id="subject-{{ subject.id }}" 
+                   value="{{ subject.id }}"
+                   class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-600 rounded bg-gray-800"
+                   {% if subject.id in current_subjects %}checked{% endif %}>
+            <label for="subject-{{ subject.id }}" class="ml-2 text-sm text-gray-300">
+                {{ subject.name }}
+            </label>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% else %}
+<div class="bg-gray-800 p-4 rounded-md border border-gray-600">
+    <p class="text-gray-400 text-sm">
+        {% if request.GET.level %}
+            No subjects found for the selected level.
+        {% else %}
+            Please select a level to see available subjects.
+        {% endif %}
+    </p>
+</div>
+{% endif %}

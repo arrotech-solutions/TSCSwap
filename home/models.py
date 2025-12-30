@@ -148,7 +148,7 @@ class SwapPreference(models.Model):
     desired_ward = models.ForeignKey(Wards, null=True, on_delete=models.SET_NULL)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    open_to_all = models.BooleanField(default=False)
+    open_to_all = models.ManyToManyField(Counties, related_name='open_to_all')
     is_hardship = models.CharField(max_length=255, choices=Hardship, default='Any')
     def __str__(self):
         return f"Preferences for {self.user}"

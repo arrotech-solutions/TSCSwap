@@ -1,0 +1,141 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}High School Matched Swaps{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-gray-800 rounded-lg shadow-md p-6">
+        <!-- Back button -->
+        <div class="mb-6">
+            <a href="{% url 'users:admin_users' %}" class="text-blue-400 hover:text-blue-300 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Back to Admin
+            </a>
+        </div>
+
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-white">High School Matched Swaps</h1>
+            <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-sm">
+                {{ total_matches }} Matches Found
+            </span>
+        </div>
+
+        {% if matched_pairs %}
+            <div class="space-y-6">
+                {% for match in matched_pairs %}
+                <div class="bg-gray-700 rounded-lg p-6 border-l-4 border-green-500">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Teacher A -->
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <div class="flex items-center space-x-4 mb-4">
+                                <div class="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                                    {{ match.teacher_a.first_name|first|upper }}{{ match.teacher_a.last_name|first|upper }}
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">{{ match.teacher_a.get_full_name|default:match.teacher_a.email }}</h3>
+                                    <p class="text-sm text-gray-400">{{ match.teacher_a.email }}</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Current School:</span> 
+                                    <span class="text-white">{{ match.teacher_a_school }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Current County:</span> 
+                                    <span class="text-white">{{ match.current_county_a }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Wants to move to:</span> 
+                                    <span class="text-green-400 font-medium">{{ match.desired_county_a }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Subjects:</span> 
+                                    <span class="text-yellow-300">{{ match.teacher_a_subjects|join:", " }}</span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <!-- Teacher B -->
+                        <div class="bg-gray-800 p-4 rounded-lg">
+                            <div class="flex items-center space-x-4 mb-4">
+                                <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                                    {{ match.teacher_b.first_name|first|upper }}{{ match.teacher_b.last_name|first|upper }}
+                                </div>
+                                <div>
+                                    <h3 class="font-bold text-white">{{ match.teacher_b.get_full_name|default:match.teacher_b.email }}</h3>
+                                    <p class="text-sm text-gray-400">{{ match.teacher_b.email }}</p>
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Current School:</span> 
+                                    <span class="text-white">{{ match.teacher_b_school }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Current County:</span> 
+                                    <span class="text-white">{{ match.current_county_b }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Wants to move to:</span> 
+                                    <span class="text-green-400 font-medium">{{ match.desired_county_b }}</span>
+                                </p>
+                                <p class="text-sm">
+                                    <span class="text-gray-400">Subjects:</span> 
+                                    <span class="text-yellow-300">{{ match.teacher_b_subjects|join:", " }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-gray-600">
+                        <div class="flex flex-col md:flex-row justify-between items-start md:items-center space-y-2 md:space-y-0">
+                            <div>
+                                <span class="px-3 py-1 bg-green-900 text-green-200 text-xs rounded-full mb-2 md:mb-0 inline-block">
+                                    Perfect Match ({{ match.match_score }}%)
+                                </span>
+                                <div class="mt-2 md:mt-0">
+                                    <span class="text-sm text-gray-300">Common Subjects: </span>
+                                    <span class="text-yellow-300 font-medium">{{ match.common_subjects|join:", " }}</span>
+                                </div>
+                            </div>
+                            <div class="space-x-2">
+                                <a href="mailto:{{ match.teacher_a.email }},{{ match.teacher_b.email }}?subject=Potential%20Teacher%20Swap%20Match" 
+                                   class="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition duration-200">
+                                    <i class="fas fa-envelope mr-1"></i> Contact Both
+                                </a>
+                                <a href="#" 
+                                   class="text-sm bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded transition duration-200">
+                                    <i class="fas fa-exchange-alt mr-1"></i> Initiate Swap
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-12">
+                <div class="text-gray-400 mb-4">
+                    <svg class="w-16 h-16 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-300">No matching swaps found</h3>
+                <p class="text-gray-500 mt-2">There are currently no high school teachers with matching swap preferences.</p>
+                <div class="mt-6">
+                    <a href="{% url 'users:admin_users' %}" class="text-blue-400 hover:text-blue-300 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 0l-3 3a1 1 0 001.414 1.414L9 9.414V13a1 1 0 102 0V9.414l1.293 1.293a1 1 0 001.414-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        Back to Admin Dashboard
+                    </a>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,86 @@
+{% extends 'users/base.html' %}
+{% load static %}
+
+{% block title %}Admin - Edit User{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-gray-800 rounded-lg shadow-md p-6 max-w-3xl mx-auto">
+        <!-- Back button -->
+        <div class="mb-6">
+            <a href="{% url 'users:admin_users' %}" class="text-blue-400 hover:text-blue-300 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" />
+                </svg>
+                Back to Users
+            </a>
+        </div>
+
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-white">Edit User: {{ user_being_edited.get_full_name|default:user_being_edited.email }}</h1>
+            <div class="flex space-x-2">
+                <span class="px-3 py-1 rounded-full text-xs font-medium {% if user_being_edited.is_active %}bg-green-900 text-green-200{% else %}bg-red-900 text-red-200{% endif %}">
+                    {% if user_being_edited.is_active %}Active{% else %}Inactive{% endif %}
+                </span>
+                <span class="px-3 py-1 rounded-full text-xs font-medium bg-blue-900 text-blue-200">
+                    {{ user_being_edited.get_role_display }}
+                </span>
+            </div>
+        </div>
+
+        <div class="bg-gray-700 rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold text-white mb-4">Edit User Information</h2>
+            
+            <form method="post" class="space-y-6">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-300 mb-1">First Name *</label>
+                        <input type="text" name="first_name" value="{{ profile.first_name|default:'' }}" 
+                            class="w-full rounded-md bg-gray-800 border border-gray-600 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" required>
+                    </div>
+                    
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Last Name *</label>
+                        <input type="text" name="last_name" value="{{ profile.last_name|default:'' }}" 
+                            class="w-full rounded-md bg-gray-800 border border-gray-600 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2" required>
+                    </div>
+                    
+                    <div class="md:col-span-1">
+                        <label class="block text-sm font-medium text-gray-300 mb-1">Surname (Optional)</label>
+                        <input type="text" name="surname" value="{{ profile.surname|default:'' }}" 
+                            class="w-full rounded-md bg-gray-800 border border-gray-600 text-white shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2">
+                    </div>
+                </div>
+                
+                <div class="pt-6 border-t border-gray-600 flex justify-end space-x-3">
+                    <a href="{% url 'users:admin_users' %}" class="px-4 py-2 border border-gray-600 rounded-md text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Cancel
+                    </a>
+                    <button type="submit" class="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                        Update Names
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Add form validation
+const form = document.querySelector('form');
+form.addEventListener('submit', function(e) {
+    const firstName = document.querySelector('input[name="profile-first_name"]').value.trim();
+    const lastName = document.querySelector('input[name="profile-last_name"]').value.trim();
+    
+    if (!firstName || !lastName) {
+        e.preventDefault();
+        alert('Please fill in both first name and last name');
+        return false;
+    }
+    
+    return true;
+});
+</script>
+{% endblock %}

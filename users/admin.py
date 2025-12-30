@@ -121,12 +121,12 @@ def get_potential_matches_count(self, obj):
             # Get user's subjects
             user_subjects = set(MySubject.objects.filter(
                 user=obj
-            ).values_list('subject', flat=True))
+            ).values_list('subject__id', flat=True))
             
             if user_subjects:
                 # Only include users who teach at least one of the same subjects
                 potential_matches = potential_matches.filter(
-                    mysubject_set__subject__in=user_subjects
+                    mysubject__subject__in=user_subjects
                 ).distinct()
         
         count = potential_matches.count()
@@ -183,7 +183,7 @@ class MyUserAdmin(admin.ModelAdmin):
         return qs.prefetch_related(
             'profile__school__level',
             'swappreference__open_to_all',
-            'mysubject_set__subject'  # Changed from mysubject__subject to mysubject_set__subject
+            'mysubject__subject'  # Using the default related_name 'mysubject' from the model
         )
     
     # Using wrapper functions instead of class methods

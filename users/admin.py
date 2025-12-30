@@ -63,9 +63,8 @@ class PotentialSwapMatchFilter(SimpleListFilter):
                     if user_prefs.desired_ward:
                         location_q |= Q(profile__school__ward=user_prefs.desired_ward)
             
-            # Get users whose current location matches the selected user's preferences
-            # and whose preferences match the selected user's current location
-            return queryset.filter(
+            # Start with base query for location matches
+            matches = queryset.filter(
                 # User's current location matches selected user's preferences
                 location_q,
                 # And their preferences match selected user's current location
@@ -78,7 +77,22 @@ class PotentialSwapMatchFilter(SimpleListFilter):
                 # Only include users with a profile and school
                 profile__isnull=False,
                 profile__school__isnull=False
-            ).distinct()
+            )
+            
+            # For secondary/high school, filter by matching subjects
+            if hasattr(user_school, 'level') and ('secondary' in user_school.level.name.lower() or 'high' in user_school.level.name.lower()):
+                # Get selected user's subjects
+                user_subjects = set(MySubject.objects.filter(
+                    user=selected_user
+                ).values_list('subject__id', flat=True))
+                
+                if user_subjects:
+                    # Filter matches to only include users who teach at least one of the same subjects
+                    matches = matches.filter(
+                        mysubject__subject__id__in=user_subjects
+                    )
+            
+            return matches.distinct()
             
         except SwapPreference.DoesNotExist:
             return queryset.none()

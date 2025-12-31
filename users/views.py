@@ -44,34 +44,39 @@ def get_whatsapp_message(user, completion_data):
     
     if completion_data['percentage'] < 100:
         # Incomplete profile message
-        base_message = "Hello {name},\n\n"
-        base_message += "I'm Kevin Gitundu, Administrator at Find A Swap. 😊\n\n"
-        base_message += "We noticed your profile is only {percentage}% complete. "
-        base_message += "To help us find the best swap matches for you, please complete your profile by adding:\n\n"
+        base_message = "Hello {name} 👋\n\n"
+        base_message += "I hope you're doing well.\n"
+        base_message += "My name is Kevin Gitundu, Administrator at Find A Swap.\n\n"
+        base_message += "We noticed your profile is about {percentage}% complete. "
+        base_message += "Completing it will help us match you with the best possible swap partners more accurately.\n\n"
+        base_message += "Kindly update the following details when you have a moment:\n\n"
         
-        # Add missing fields
+        # Add missing fields with specific guidance
         missing_fields = []
         if not completion_data['has_basic_info']:
             missing_fields.append("Basic information (name, contact details)")
         if not completion_data['has_school_link']:
-            missing_fields.append("School information")
+            missing_fields.append("School information (school name, county, constituency & ward)")
         if not completion_data['has_level']:
             missing_fields.append("Teaching level")
-        if not completion_data['has_swap_prefs']:
-            missing_fields.append("Swap preferences (desired location)")
         if completion_data.get('subject_required', False) and not completion_data['has_subjects']:
-            missing_fields.append("Subjects you teach")
+            missing_fields.append("Teaching subjects: https://www.tscswap.com/mysubject/new/")
+        if not completion_data['has_swap_prefs']:
+            missing_fields.append("Swap preferences: https://www.tscswap.com/preferences/")
             
         base_message += "• " + "\n• ".join(missing_fields)
-        base_message += "\n\nComplete your profile now: {profile_url}"
+        base_message += "\n\nIf you need any help, feel free to message me—I'll be happy to assist 😊\n"
+        base_message += "\nThank you for being part of Find A Swap."
     else:
         # Complete profile message
-        base_message = "Hello {name},\n\n"
-        base_message += "I'm Kevin Gitundu, Administrator at Find A Swap. 😊\n\n"
-        base_message += "Thank you for completing your profile! We're actively looking for suitable swap matches for you. "
-        base_message += "We'll notify you as soon as we find potential matches.\n\n"
-        base_message += "You can check for new matches in your dashboard: {dashboard_url}\n\n"
-        base_message += "If you have any questions, feel free to reach out!"
+        base_message = "Hello {name} 👋\n\n"
+        base_message += "I hope you're doing well.\n"
+        base_message += "My name is Kevin Gitundu, Administrator at Find A Swap.\n\n"
+        base_message += "Thank you for completing your profile! We're actively searching for the best swap matches for you. "
+        base_message += "You'll be the first to know when we find potential matches.\n\n"
+        base_message += "You can also check for new matches in your dashboard: {dashboard_url}\n\n"
+        base_message += "If you need any assistance or have questions, feel free to message me—I'll be happy to help! 😊\n"
+        base_message += "\nThank you for being part of Find A Swap."
     
     # Format the message with user's name and profile URL
     profile_url = f"www.tscswap.com{reverse('users:profile_edit')}"

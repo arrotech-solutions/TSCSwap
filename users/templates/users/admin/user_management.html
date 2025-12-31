@@ -197,25 +197,7 @@
                         <a href="{% url 'users_admin:user_potential_matches' user.id %}" class="block w-full text-center py-1 px-3 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm mb-2">
                             View Matches
                         </a>
-                        {% if not user.profile_complete and user.phone %}
-                            {% with message="Hello "|add:user.full_name|default:"there"|add:",%0A%0AWelcome to Find a Swap! We're grateful to have you in our community.%0A%0AWe noticed you haven't completed setting up your account. To start receiving swap matches, please complete the following:%0A%0A- "|add:user.missing_fields|join:"%0A- "|urlencode %}
-                            <a href="https://wa.me/{{ user.phone|slice:'1:' }}?text={{ message }}" 
-                               target="_blank" 
-                               class="block w-full text-center py-1 px-3 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                               title="Send WhatsApp message">
-                                WhatsApp
-                            </a>
-                            {% endwith %}
-                        {% endif %}
-                            {% with message="Hello "|add:user.full_name|default:"there"|add:",%0A%0AWelcome to Find a Swap! We're grateful to have you in our community.%0A%0AWe noticed you haven't completed setting up your account. To start receiving swap matches, please complete the following:%0A%0A"|add:user.missing_fields|join:"%0A- "|urlencode %}
-                            <a href="https://wa.me/{{ user.phone|slice:'1:' }}?text={{ message }}" 
-                               target="_blank" 
-                               class="block w-full text-center py-1 px-3 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
-                               title="Send WhatsApp message">
-                                WhatsApp
-                            </a>
-                            {% endwith %}
-                        {% endif %}
+                        {# WhatsApp button removed as requested #}
                     </td>
                 </tr>
                 {% endfor %}

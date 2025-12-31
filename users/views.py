@@ -16,6 +16,7 @@ from django.http import JsonResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils import timezone
 from django.utils.html import strip_tags
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods, require_GET
@@ -750,6 +751,122 @@ def get_subjects_for_level(request, level_id):
     subjects = list(Subject.objects.filter(level=level).values('id', 'name'))
     return JsonResponse({'subjects': subjects})
 
+def calculate_profile_completion(user, profile):
+    """
+    Calculate the profile completion percentage for a user.
+    Returns a dictionary with completion percentage and status of each section.
+    """
+    completion_score = 0
+    
+    # 1. Check if personal profile is set up (25%)
+    has_personal_profile = bool(profile and all([
+        profile.phone,
+        user.id_number,
+        user.tsc_number,
+        profile.first_name,
+        profile.last_name,
+        profile.gender
+    ]))
+    
+    # 2. Check if school info is set up (25%)
+    has_school_info = bool(profile and all([
+        profile.school,
+        profile.level,
+    ]))
+    
+    # 3. Check if MySubjects are set up (25%)
+    has_subjects = user.mysubject_set.exists()
+    
+    # 4. Check if swap preferences are set up (25%)
+    has_swap_prefs = hasattr(user, 'swappreference') and all([
+        user.swappreference.desired_county,
+        user.swappreference.desired_constituency,
+        user.swappreference.desired_ward
+    ])
+    
+    # Calculate completion percentage (25% for each completed section)
+    completion_score = sum([
+        25 if has_personal_profile else 0,
+        25 if has_school_info else 0,
+        25 if has_subjects else 0,
+        25 if has_swap_prefs else 0
+    ])
+    
+    return {
+        'percentage': completion_score,
+        'has_personal_profile': has_personal_profile,
+        'has_school_info': has_school_info,
+        'has_subjects': has_subjects,
+        'has_swap_prefs': has_swap_prefs
+    }
+
+def get_profile_completion_data(user, profile):
+    """
+    Calculate the profile completion data for a user.
+    Completion is based on:
+    1. Basic info (first name and phone number) - 20%
+    2. School link - 20%
+    3. Level set in profile - 20%
+    4. Swap preferences - 20%
+    5. MySubject (if level is secondary/high school) - 20%
+    """
+    # Initialize all checks as False
+    has_basic_info = False
+    has_school_link = False
+    has_level = False
+    has_swap_prefs = False
+    has_subjects = False
+    
+    # 1. Check basic info (20%)
+    if profile:
+        has_basic_info = all([
+            profile.phone and str(profile.phone).strip(),
+            profile.first_name and str(profile.first_name).strip(),
+        ])
+    
+    # 2. Check if user is linked to a school (20%)
+    if profile and hasattr(profile, 'school'):
+        has_school_link = profile.school is not None
+    
+    # 3. Check if level is set in profile (20%)
+    if profile and hasattr(profile, 'level'):
+        has_level = profile.level is not None
+        
+        # 4. Check if MySubject is set (only for secondary/high school) - 20%
+        if has_level and profile.level.name.lower() in ['secondary', 'high school']:
+            has_subjects = user.mysubject_set.exists()
+        else:
+            # If not secondary/high school, consider this section complete
+            has_subjects = True
+    
+    # 5. Check swap preferences (20%)
+    if hasattr(user, 'swappreference') and user.swappreference:
+        swap_pref = user.swappreference
+        has_swap_prefs = all([
+            bool(swap_pref.desired_county),
+        
+        ])
+    
+    # Calculate completion percentage (20% for each completed section)
+    completion_score = sum([
+        20 if has_basic_info else 0,
+        20 if has_school_link else 0,
+        20 if has_level else 0,
+        20 if has_swap_prefs else 0,
+        20 if has_subjects else 0
+    ])
+    
+    return {
+        'percentage': completion_score,
+        'has_basic_info': has_basic_info,
+        'has_school_link': has_school_link,
+        'has_level': has_level,
+        'has_swap_prefs': has_swap_prefs,
+        'has_subjects': has_subjects,
+        'subject_required': has_level and profile and hasattr(profile, 'level') and 
+                           profile.level.name.lower() in ['secondary', 'high school']
+    }
+
 @login_required
 def admin_users_view(request):
     if not request.user.is_staff:
@@ -762,68 +879,48 @@ def admin_users_view(request):
     from users.models import PersonalProfile
     user_profiles = {profile.user_id: profile for profile in PersonalProfile.objects.select_related('school', 'level')}
     
-    # Calculate profile completion percentage for each user
+    # Calculate profile completion for each user
     user_data = []
     for user in users:
-        completion_score = 0
-        total_checks = 4  # Total number of completion checks
-        
-        # 1. Check if personal profile is set up (25%)
         profile = user_profiles.get(user.id)
-        has_personal_profile = bool(profile and all([
-            profile.phone,
-            user.id_number,
-            # kra_pin might not exist in the model
-            user.tsc_number,
-            # bank details might not be in the profile
-            profile.first_name,
-            profile.last_name,
-            profile.gender
-        ]))
-        if has_personal_profile:
-            completion_score += 25
         
-        # 2. Check if school info is set up (25%)
-        has_school_info = bool(profile and all([
-            profile.school,
-            profile.level,
-            # These fields might not exist in the profile model
-            # Add any other school-related fields that should be checked
-        ]))
-        if has_school_info:
-            completion_score += 25
+        # Use our helper function to get completion data
+        completion = get_profile_completion_data(user, profile)
         
-        # 3. Check if MySubjects are set up (25%)
-        has_subjects = user.mysubject_set.exists()
-        if has_subjects:
-            completion_score += 25
-        
-        # 4. Check if swap preferences are set up (25%)
-        has_swap_prefs = hasattr(user, 'swappreference') and all([
-            user.swappreference.desired_county,
-            user.swappreference.desired_constituency,
-            # preferred_school_type might not exist, check for other relevant fields
-            user.swappreference.desired_ward
-        ])
-        if has_swap_prefs:
-            completion_score += 25
+        # Get user's subscription status
+        has_active_subscription = hasattr(user, 'subscription') and user.subscription.is_active
         
         user_data.append({
             'user': user,
-            'profile': profile,  # Add the profile to the user_data
-            'completion_percentage': completion_score,
-            'has_active_subscription': hasattr(user, 'subscription') and user.subscription.is_active,
-            'has_personal_profile': has_personal_profile,
-            'has_school_info': has_school_info,
-            'has_subjects': has_subjects,
-            'has_swap_prefs': has_swap_prefs
+            'profile': profile,
+            'completion_percentage': completion['percentage'],
+            'completion_data': completion,  # Include detailed completion data
+            'has_active_subscription': has_active_subscription,
+            'is_active': user.is_active,
+            'is_staff': user.is_staff,
+            'is_superuser': user.is_superuser,
+            'date_joined': user.date_joined,
+            'last_login': user.last_login,
+            'subscription': getattr(user, 'subscription', None)
         })
+    
+    # Calculate statistics
+    total_users = len(user_data)
+    active_users = sum(1 for u in user_data if u['is_active'])
+    staff_users = sum(1 for u in user_data if u['is_staff'])
+    active_subscriptions = sum(1 for u in user_data if u['has_active_subscription'])
+    avg_completion = sum(u['completion_percentage'] for u in user_data) / total_users if total_users > 0 else 0
     
     context = {
         'users': user_data,
-        'total_users': users.count(),
-        'active_subscriptions': sum(1 for u in user_data if u['has_active_subscription']),
-        'avg_completion': sum(u['completion_percentage'] for u in user_data) / len(user_data) if user_data else 0
+        'total_users': total_users,
+        'active_users': active_users,
+        'staff_users': staff_users,
+        'active_subscriptions': active_subscriptions,
+        'avg_completion': round(avg_completion, 1),  # Round to 1 decimal place
+        'now': timezone.now(),
+        'page_title': 'User Management',
+        'active_tab': 'users'
     }
     
     return render(request, 'users/admin_users.html', context)

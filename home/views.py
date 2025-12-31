@@ -1021,12 +1021,12 @@ def swap_detail(request, swap_id):
     # Check if the current user has already requested this swap
     has_requested = False
     if user.is_authenticated and not is_owner:
-        has_requested = SwapRequests.objects.filter(user=user, swap=swap).exists()
+        has_requested = SwapRequests.objects.filter(requester=user, target=swap.user, is_active=True).exists()
     
-    # Get all swap requests for this swap
+    # Get all swap requests for this swap (requests where target is the swap owner)
     swap_requests = None
     if is_owner:
-        swap_requests = SwapRequests.objects.filter(swap=swap).select_related('user__profile')
+        swap_requests = SwapRequests.objects.filter(target=swap.user, is_active=True).select_related('requester__profile')
     
     context = {
         'swap': swap,
@@ -1153,8 +1153,8 @@ def accept_swap_request(request, request_id):
     """
     swap_request = get_object_or_404(SwapRequests, id=request_id)
     
-    # Only the swap owner can accept requests
-    if request.user != swap_request.swap.user:
+    # Only the target can accept requests
+    if request.user != swap_request.target:
         return HttpResponseForbidden("You don't have permission to perform this action.")
     
     # Mark this request as accepted but keep it active
@@ -1162,21 +1162,16 @@ def accept_swap_request(request, request_id):
     swap_request.is_active = True  # Keep the request active
     swap_request.save()
     
-    # Mark the swap as completed and keep it active
-    swap = swap_request.swap
-    swap.completed = True
-    swap.status = True  # Keep the swap active
-    swap.save()
-    
-    # Deactivate all other pending requests for this swap
-    # but only if they haven't been accepted
+    # Deactivate all other pending requests between these users
+    from django.db.models import Q
     SwapRequests.objects.filter(
-        swap=swap, 
+        Q(requester=swap_request.requester, target=swap_request.target) |
+        Q(requester=swap_request.target, target=swap_request.requester),
         is_active=True,
-        accepted=False  # Only deactivate unaccepted requests
+        accepted=False
     ).exclude(id=request_id).update(is_active=False)
     
-    messages.success(request, f"You have accepted the swap request from {swap_request.user.email}")
+    messages.success(request, f"You have accepted the swap request from {swap_request.requester.get_full_name() or swap_request.requester.email}")
     return redirect('home:my_swap_requests')
 
 @login_required
@@ -1186,8 +1181,8 @@ def reject_swap_request(request, request_id):
     """
     swap_request = get_object_or_404(SwapRequests, id=request_id)
     
-    # Only the swap owner can reject requests
-    if request.user != swap_request.swap.user:
+    # Only the target can reject requests
+    if request.user != swap_request.target:
         return HttpResponseForbidden("You don't have permission to perform this action.")
     
     # Mark the request as inactive (soft delete) instead of hard deleting
@@ -1195,7 +1190,7 @@ def reject_swap_request(request, request_id):
     swap_request.accepted = False  # Explicitly mark as not accepted
     swap_request.save()
     
-    messages.info(request, f"You have rejected the swap request from {swap_request.user.email}")
+    messages.info(request, f"You have rejected the swap request from {swap_request.requester.get_full_name() or swap_request.requester.email}")
     return redirect('home:my_swap_requests')
 
 @login_required
@@ -1209,10 +1204,10 @@ def request_swap(request, swap_id):
     if request.user == swap.user:
         return HttpResponseForbidden("You cannot request your own swap.")
     
-    # Check if user already has an active request for this swap
+    # Check if user already has an active request to this swap owner
     existing_request = SwapRequests.objects.filter(
-        user=request.user,
-        swap=swap,
+        requester=request.user,
+        target=swap.user,
         is_active=True
     ).exists()
     
@@ -1222,8 +1217,8 @@ def request_swap(request, swap_id):
     
     if request.method == 'POST':
         SwapRequests.objects.create(
-            user=request.user,
-            swap=swap,
+            requester=request.user,
+            target=swap.user,
             is_active=True
         )
         messages.success(request, "Your swap request has been sent!")
@@ -1238,8 +1233,8 @@ def my_swap_requests(request):
     Display all swap requests made by the current user.
     """
     user = request.user
-    sent_requests = SwapRequests.objects.filter(user=request.user).select_related('swap', 'swap__user').order_by('-created_at')
-    received_requests = SwapRequests.objects.filter(swap__user=user).select_related('swap', 'user').order_by('-created_at')
+    sent_requests = SwapRequests.objects.filter(requester=request.user).select_related('target__profile').order_by('-created_at')
+    received_requests = SwapRequests.objects.filter(target=user).select_related('requester__profile').order_by('-created_at')
     
     context = {
         'sent_requests': sent_requests,

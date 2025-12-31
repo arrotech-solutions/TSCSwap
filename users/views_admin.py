@@ -39,7 +39,7 @@ def user_management(request):
             'date_joined': user.date_joined,
             'phone': user.profile.phone if hasattr(user, 'profile') and user.profile.phone else '-',
             'school': None,
-            'subjects': [],
+            'triangle_swaps': 0,
             'potential_matches': 0
         }
 
@@ -54,9 +54,44 @@ def user_management(request):
                 'level': school.level.name if hasattr(school, 'level') and school.level else 'N/A'
             }
 
-        # Add subjects
-        if hasattr(user, 'mysubject_set'):
-            user_dict['subjects'] = [ms.subject.name for ms in user.mysubject_set.all()]
+        # Calculate triangle swaps
+        try:
+            if hasattr(user, 'profile') and user.profile.school and hasattr(user.profile.school, 'level') and hasattr(user, 'swappreference'):
+                from home.triangle_swap_utils import find_triangle_swaps_primary, find_triangle_swaps_secondary
+                from home.models import Level
+                
+                user_level = user.profile.school.level
+                is_secondary = 'secondary' in user_level.name.lower() or 'high' in user_level.name.lower()
+                
+                # Get all teachers at the same level
+                teachers = MyUser.objects.filter(
+                    is_active=True,
+                    role='Teacher',
+                    profile__isnull=False,
+                    profile__school__isnull=False,
+                    profile__school__level=user_level,
+                    swappreference__isnull=False
+                ).select_related(
+                    'profile__school__ward__constituency__county',
+                    'swappreference__desired_county',
+                    'profile__school__level'
+                ).prefetch_related(
+                    'swappreference__open_to_all',
+                    'mysubject_set__subject'
+                ).distinct()
+                
+                # Find triangle swaps
+                if is_secondary:
+                    all_triangles = find_triangle_swaps_secondary(teachers)
+                else:
+                    all_triangles = find_triangle_swaps_primary(teachers)
+                
+                # Count triangles that include this user
+                triangle_count = sum(1 for triangle in all_triangles if user.id in [t.id for t in triangle])
+                user_dict['triangle_swaps'] = triangle_count
+        except Exception as e:
+            print(f"Error calculating triangle swaps for user {user.id}: {str(e)}")
+            user_dict['triangle_swaps'] = 0
 
         # Calculate potential matches using the same logic as the dashboard
         try:

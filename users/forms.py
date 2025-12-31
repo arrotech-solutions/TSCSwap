@@ -67,152 +67,63 @@ class MyAuthenticationForm(AuthenticationForm):
 class ProfileEditForm(forms.ModelForm):
     class Meta:
         model = PersonalProfile
-        fields = ['first_name', 'last_name', 'surname', 'phone', 'gender']
+        fields = ['first_name', 'last_name', 'surname', 'phone', 'gender', 'profile_picture']
         
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Make fields not required if needed
         self.fields['surname'].required = False
+        self.fields['profile_picture'].required = False
         
-        # Set initial values for profile fields
-        if self.instance and hasattr(self.instance, 'user'):
-            self.fields['phone'].initial = self.instance.phone
-            self.fields['gender'].initial = self.instance.gender
-    
-    # Add phone field that will be saved to PersonalProfile
-    phone = forms.CharField(
-        required=True,
-        max_length=20,
-        widget=forms.TextInput(attrs={
+        # Customize phone field
+        self.fields['phone'].required = True
+        self.fields['phone'].widget.attrs.update({
             'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200',
             'placeholder': 'e.g. +2547XXXXXXXX',
-        }),
-        help_text='Required for notifications and account security.'
-    )
-    
-    GENDER_CHOICES = [
-        ('M', 'Male'),
-        ('F', 'Female'),
-        ('O', 'Other'),
-    ]
-    
-    gender = forms.ChoiceField(
-        choices=GENDER_CHOICES,
-        required=True,
-        widget=forms.RadioSelect(attrs={
+        })
+        self.fields['phone'].help_text = 'Required for notifications and account security.'
+        
+        # Customize gender field
+        self.fields['gender'].required = True
+        self.fields['gender'].widget.attrs.update({
             'class': 'mt-2 space-y-2',
-        }),
-        help_text='Required for demographic information.'
-    )
-    
-    profile_picture = forms.ImageField(
-        required=False,
-        widget=forms.ClearableFileInput(attrs={
+        })
+        self.fields['gender'].help_text = 'Required for demographic information.'
+        
+        # Customize profile picture field
+        self.fields['profile_picture'].widget.attrs.update({
             'class': 'hidden',
             'accept': 'image/*',
-        }),
-        help_text='Upload a profile picture (JPG, PNG, or GIF, max 2MB)'
-    )
+        })
+        self.fields['profile_picture'].help_text = 'Upload a profile picture (JPG, PNG, or GIF, max 2MB)'
     
     def clean_phone(self):
         phone = self.cleaned_data.get('phone')
-        if not phone and hasattr(self.instance, 'profile') and not self.instance.profile.phone:
+        if not phone:
             raise forms.ValidationError('This field is required.')
-        return phone or (self.instance.profile.phone if hasattr(self.instance, 'profile') else '')
+        return phone
     
     def clean_gender(self):
         gender = self.cleaned_data.get('gender')
-        if not gender and hasattr(self.instance, 'profile') and not self.instance.profile.gender:
+        if not gender:
             raise forms.ValidationError('This field is required.')
-        return gender or (self.instance.profile.gender if hasattr(self.instance, 'profile') else '')
+        return gender
     
     def save(self, commit=True):
-        user = super().save(commit=False)
+        # Save the profile
+        profile = super().save(commit=False)
         
-        # Get or create the user's profile
-        profile, created = PersonalProfile.objects.get_or_create(user=user)
-        
-        # Update profile fields
-        profile.phone = self.cleaned_data.get('phone')
-        profile.gender = self.cleaned_data.get('gender')
-        
-        # Handle profile picture upload
-        if 'profile_picture' in self.files:
-            profile.profile_picture = self.files['profile_picture']
-        # Handle profile picture clear
-        elif self.cleaned_data.get('profile_picture-clear'):
-            profile.profile_picture.delete(save=False)
+        # Update the user's first_name and last_name from profile
+        if profile.user:
+            profile.user.first_name = self.cleaned_data.get('first_name', '')
+            profile.user.last_name = self.cleaned_data.get('last_name', '')
+            if commit:
+                profile.user.save()
         
         if commit:
-            user.save()
             profile.save()
             
-        return user
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        # Make TSC number required
-        self.fields['tsc_number'].required = True
-        
-        # Set initial values from user's profile
-        if self.instance and hasattr(self.instance, 'profile'):
-            self.fields['phone'].initial = self.instance.profile.phone
-            self.fields['gender'].initial = self.instance.profile.gender
-            if self.instance.profile.profile_picture:
-                self.fields['profile_picture'].initial = self.instance.profile.profile_picture
-        
-        # Add help text for TSC number
-        self.fields['tsc_number'].help_text = 'Your TSC registration number is required to verify your teaching status.'
-        
-        # Add enctype to form for file uploads
-        if 'enctype' not in self.Meta.widgets:
-            self.Meta.widgets['enctype'] = 'multipart/form-data'
-    
-    class Meta:
-        model = MyUser
-        fields = ['first_name', 'last_name', 'email', 'phone', 'gender', 'tsc_number']
-        widgets = {
-            'first_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200',
-                'placeholder': 'First Name',
-            }),
-            'last_name': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200',
-                'placeholder': 'Last Name',
-            }),
-            'email': forms.EmailInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200',
-                'placeholder': 'Email Address',
-                'readonly': 'readonly',
-            }),
-            'tsc_number': forms.TextInput(attrs={
-                'class': 'w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200',
-                'placeholder': 'TSC Number',
-            }),
-        }
-    
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        
-        # Save the user first if committing
-        if commit:
-            user.save()
-            
-            # Update or create profile with phone number, gender, and profile picture
-            profile, created = user.profile.get_or_create(user=user)
-            profile.phone = self.cleaned_data['phone']
-            profile.gender = self.cleaned_data['gender']
-            
-            # Handle profile picture upload
-            if 'profile_picture' in self.cleaned_data and self.cleaned_data['profile_picture'] is not None:
-                # Delete old profile picture if it exists and is different from the new one
-                if profile.profile_picture and profile.profile_picture != self.cleaned_data['profile_picture']:
-                    profile.profile_picture.delete(save=False)
-                profile.profile_picture = self.cleaned_data['profile_picture']
-            
-            profile.save()
-            
-        return user
+        return profile
 
 class UserEditForm(forms.ModelForm):
     new_password = forms.CharField(

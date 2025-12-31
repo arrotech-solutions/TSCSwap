@@ -231,35 +231,12 @@ def profile_edit_view(request):
         form = ProfileEditForm(
             request.POST, 
             request.FILES, 
-            instance=profile,
-            initial={
-                'first_name': request.user.first_name,
-                'last_name': request.user.last_name,
-                'surname': getattr(profile, 'surname', ''),
-                'phone': profile.phone, 
-                'gender': profile.gender
-            }
+            instance=profile
         )
         
         if form.is_valid():
-            # Save profile with all fields
-            profile = form.save(commit=False)
-            
-            # Handle profile picture upload
-            if 'profile_picture' in request.FILES:
-                profile.profile_picture = request.FILES['profile_picture']
-            # Handle profile picture clear
-            elif form.cleaned_data.get('profile_picture-clear'):
-                profile.profile_picture.delete(save=False)
-            
-            # Save the profile
-            profile.save()
-            
-            # Also update the User model's first_name and last_name for compatibility
-            user = request.user
-            user.first_name = form.cleaned_data.get('first_name', '')
-            user.last_name = form.cleaned_data.get('last_name', '')
-            user.save()
+            # Save profile - the form's save method handles everything
+            profile = form.save(commit=True)
             
             # Update session with new profile picture if it exists
             if hasattr(profile, 'profile_picture') and profile.profile_picture:
@@ -269,6 +246,8 @@ def profile_edit_view(request):
             return redirect('users:profile_edit')
         else:
             messages.error(request, 'Please correct the errors below.')
+            # Print form errors for debugging
+            print("Form errors:", form.errors)
     else:
         form = ProfileEditForm(
             instance=profile,
@@ -469,16 +448,16 @@ def dashboard(request):
     
     # Get swap requests
     # Requests sent by the user
-    sent_requests = SwapRequests.objects.filter(user=user, is_active=True).select_related(
-        'swap', 'swap__user__profile'
+    sent_requests = SwapRequests.objects.filter(requester=user, is_active=True).select_related(
+        'target__profile'
     ).order_by('-created_at')
     
     # Requests received by the user
     received_requests = SwapRequests.objects.filter(
-        swap__user=user, 
+        target=user, 
         is_active=True
     ).select_related(
-        'user__profile', 'swap'
+        'requester__profile'
     ).order_by('-created_at')
     
     # Count of pending requests for the user's swaps
@@ -670,6 +649,87 @@ def dashboard(request):
         show_potential_matches_section = True
         potential_matches_message = None if has_potential_matches else "No potential matches found at this time."
 
+    # Get triangle swaps for this user
+    triangle_swaps = []
+    user_triangle_swaps = []
+    
+    if profile_complete and has_profile and user.profile.school:
+        from home.triangle_swap_utils import (
+            find_triangle_swaps_primary, 
+            find_triangle_swaps_secondary,
+            get_current_county,
+            get_user_subjects
+        )
+        
+        # Determine if user is primary or secondary
+        user_school_level = user.profile.school.level
+        is_secondary = user_school_level and ('secondary' in user_school_level.name.lower() or 'high' in user_school_level.name.lower())
+        
+        # Get all teachers at the same level
+        teachers = MyUser.objects.filter(
+            is_active=True,
+            role='Teacher',
+            profile__isnull=False,
+            profile__school__isnull=False,
+            profile__school__level=user_school_level,
+            swappreference__isnull=False
+        ).select_related(
+            'profile__school__ward__constituency__county',
+            'swappreference__desired_county',
+            'profile__school__level'
+        ).prefetch_related(
+            'swappreference__open_to_all',
+            'mysubject_set__subject'
+        ).distinct()
+        
+        # Find triangle swaps
+        if is_secondary:
+            all_triangles = find_triangle_swaps_secondary(teachers)
+        else:
+            all_triangles = find_triangle_swaps_primary(teachers)
+        
+        # Filter triangles that include the current user
+        for teacher_a, teacher_b, teacher_c in all_triangles:
+            if user.id in [teacher_a.id, teacher_b.id, teacher_c.id]:
+                county_a = get_current_county(teacher_a)
+                county_b = get_current_county(teacher_b)
+                county_c = get_current_county(teacher_c)
+                
+                triangle_data = {
+                    'teacher_a': {
+                        'user': teacher_a,
+                        'name': teacher_a.profile.first_name + ' ' + (teacher_a.profile.surname or teacher_a.profile.last_name or '') if teacher_a.profile.first_name else teacher_a.email,
+                        'current_location': county_a.name if county_a else 'Unknown',
+                        'wants_location': county_b.name if county_b else 'Unknown',
+                        'is_current_user': teacher_a.id == user.id,
+                    },
+                    'teacher_b': {
+                        'user': teacher_b,
+                        'name': teacher_b.profile.first_name + ' ' + (teacher_b.profile.surname or teacher_b.profile.last_name or '') if teacher_b.profile.first_name else teacher_b.email,
+                        'current_location': county_b.name if county_b else 'Unknown',
+                        'wants_location': county_c.name if county_c else 'Unknown',
+                        'is_current_user': teacher_b.id == user.id,
+                    },
+                    'teacher_c': {
+                        'user': teacher_c,
+                        'name': teacher_c.profile.first_name + ' ' + (teacher_c.profile.surname or teacher_c.profile.last_name or '') if teacher_c.profile.first_name else teacher_c.email,
+                        'current_location': county_c.name if county_c else 'Unknown',
+                        'wants_location': county_a.name if county_a else 'Unknown',
+                        'is_current_user': teacher_c.id == user.id,
+                    },
+                }
+                
+                if is_secondary:
+                    # Add common subjects for secondary
+                    subjects_a = get_user_subjects(teacher_a)
+                    subjects_b = get_user_subjects(teacher_b)
+                    subjects_c = get_user_subjects(teacher_c)
+                    common_subjects = subjects_a.intersection(subjects_b).intersection(subjects_c)
+                    from home.models import Subject
+                    triangle_data['common_subjects'] = [Subject.objects.get(id=sid).name for sid in common_subjects if Subject.objects.filter(id=sid).exists()]
+                
+                user_triangle_swaps.append(triangle_data)
+    
     # Debug information
     debug_info = {
         'profile_complete': is_profile_complete(user),
@@ -706,6 +766,8 @@ def dashboard(request):
         'show_potential_matches_section': True,
         'potential_matches_message': potential_matches_message,
         'debug_info': debug_checks,
+        'triangle_swaps': user_triangle_swaps if 'user_triangle_swaps' in locals() else [],
+        'has_triangle_swaps': len(user_triangle_swaps) > 0 if 'user_triangle_swaps' in locals() else False,
         
         # Completion status for each section - ensure these are booleans
         'personal_info_complete': bool(personal_info_complete),
@@ -1328,6 +1390,153 @@ def primary_matched_swaps(request):
         for match in potential_matches:
             if match == teacher or match.id in processed_pairs:
                 continue
+
+@login_required
+@staff_required(login_url='users:login')
+def primary_triangle_swaps(request):
+    """
+    View to find triangle swaps for PRIMARY level teachers.
+    Triangle swap: Three teachers exchange locations in a circular pattern.
+    Only checks location matching (no subject requirement for primary).
+    """
+    from home.triangle_swap_utils import find_triangle_swaps_primary, get_current_county
+    from home.models import Level
+    
+    # Get the primary school level object
+    try:
+        primary_level = Level.objects.get(name__iexact='Primary School')
+    except Level.DoesNotExist:
+        messages.error(request, "Primary School level not found in the system. Please add it first.")
+        return redirect('users:admin_users')
+    
+    # Get all active primary school teachers with profiles, schools, and swap preferences
+    teachers = MyUser.objects.filter(
+        is_active=True,
+        role='Teacher',
+        profile__isnull=False,
+        profile__school__isnull=False,
+        profile__school__level=primary_level,
+        swappreference__isnull=False
+    ).select_related(
+        'profile__school__ward__constituency__county',
+        'swappreference__desired_county',
+        'profile__school__level'
+    ).prefetch_related(
+        'swappreference__open_to_all'
+    ).distinct()
+    
+    print(f"[DEBUG] Found {teachers.count()} primary teachers for triangle swap detection")
+    
+    # Find triangle swaps
+    triangle_swaps = find_triangle_swaps_primary(teachers)
+    
+    # Format triangle swaps for display
+    formatted_triangles = []
+    for teacher_a, teacher_b, teacher_c in triangle_swaps:
+        county_a = get_current_county(teacher_a)
+        county_b = get_current_county(teacher_b)
+        county_c = get_current_county(teacher_c)
+        
+        formatted_triangles.append({
+            'teacher_a': {
+                'user': teacher_a,
+                'current_location': county_a.name if county_a else 'Unknown',
+                'wants_location': county_b.name if county_b else 'Unknown',
+            },
+            'teacher_b': {
+                'user': teacher_b,
+                'current_location': county_b.name if county_b else 'Unknown',
+                'wants_location': county_c.name if county_c else 'Unknown',
+            },
+            'teacher_c': {
+                'user': teacher_c,
+                'current_location': county_c.name if county_c else 'Unknown',
+                'wants_location': county_a.name if county_a else 'Unknown',
+            },
+        })
+    
+    return render(request, 'users/primary_triangle_swaps.html', {
+        'triangle_swaps': formatted_triangles,
+        'total_triangles': len(formatted_triangles),
+    })
+
+@login_required
+@staff_required(login_url='users:login')
+def secondary_triangle_swaps(request):
+    """
+    View to find triangle swaps for SECONDARY level teachers.
+    Triangle swap: Three teachers exchange locations in a circular pattern.
+    Requires BOTH location AND subject matching (all three must share at least one subject).
+    """
+    from home.triangle_swap_utils import find_triangle_swaps_secondary, get_current_county, get_user_subjects
+    from home.models import Level
+    
+    # Get the secondary/high school level object
+    try:
+        secondary_level = Level.objects.get(name__iexact='Secondary/High School')
+    except Level.DoesNotExist:
+        messages.error(request, "Secondary/High School level not found in the system. Please add it first.")
+        return redirect('users:admin_users')
+    
+    # Get all active secondary school teachers with profiles, schools, swap preferences, and subjects
+    teachers = MyUser.objects.filter(
+        is_active=True,
+        role='Teacher',
+        profile__isnull=False,
+        profile__school__isnull=False,
+        profile__school__level=secondary_level,
+        swappreference__isnull=False
+    ).select_related(
+        'profile__school__ward__constituency__county',
+        'swappreference__desired_county',
+        'profile__school__level'
+    ).prefetch_related(
+        'swappreference__open_to_all',
+        'mysubject_set__subject'
+    ).distinct()
+    
+    print(f"[DEBUG] Found {teachers.count()} secondary teachers for triangle swap detection")
+    
+    # Find triangle swaps
+    triangle_swaps = find_triangle_swaps_secondary(teachers)
+    
+    # Format triangle swaps for display
+    formatted_triangles = []
+    for teacher_a, teacher_b, teacher_c in triangle_swaps:
+        county_a = get_current_county(teacher_a)
+        county_b = get_current_county(teacher_b)
+        county_c = get_current_county(teacher_c)
+        
+        # Get common subjects for display
+        subjects_a = get_user_subjects(teacher_a)
+        subjects_b = get_user_subjects(teacher_b)
+        subjects_c = get_user_subjects(teacher_c)
+        common_subjects = subjects_a.intersection(subjects_b).intersection(subjects_c)
+        
+        formatted_triangles.append({
+            'teacher_a': {
+                'user': teacher_a,
+                'current_location': county_a.name if county_a else 'Unknown',
+                'wants_location': county_b.name if county_b else 'Unknown',
+            },
+            'teacher_b': {
+                'user': teacher_b,
+                'current_location': county_b.name if county_b else 'Unknown',
+                'wants_location': county_c.name if county_c else 'Unknown',
+            },
+            'teacher_c': {
+                'user': teacher_c,
+                'current_location': county_c.name if county_c else 'Unknown',
+                'wants_location': county_a.name if county_a else 'Unknown',
+            },
+            'common_subjects': common_subjects,
+        })
+    
+    return render(request, 'users/secondary_triangle_swaps.html', {
+        'triangle_swaps': formatted_triangles,
+        'total_triangles': len(formatted_triangles),
+    })
+
 @staff_required(login_url='users:login')
 def high_school_matched_swaps(request):
     """
@@ -1538,38 +1747,92 @@ def initiate_swap(request, user_id):
         messages.error(request, "The selected user does not have a complete profile.")
         return redirect('users:dashboard')
     
-    # Check if a swap already exists between these users
-    existing_swap = Swaps.objects.filter(
-        user=request.user,
-        swaprequests__user=target_user,
-        status=True
+    # Check if a swap request already exists between these users in either direction
+    # Check for exact match first (requester -> target)
+    existing_exact = SwapRequests.objects.filter(
+        requester=request.user,
+        target=target_user
     ).first()
     
-    if existing_swap:
-        messages.info(request, f"You already have a pending swap request with {target_user.username}.")
+    # Check for reverse match (target -> requester)
+    existing_reverse = SwapRequests.objects.filter(
+        requester=target_user,
+        target=request.user
+    ).first()
+    
+    if existing_exact:
+        if existing_exact.is_active:
+            messages.info(request, f"You already have a pending swap request with {target_user.get_full_name() or target_user.email}.")
+        else:
+            # Reactivate the existing request
+            existing_exact.is_active = True
+            existing_exact.accepted = False
+            existing_exact.save()
+            messages.info(request, f"Swap request reactivated with {target_user.get_full_name() or target_user.email}.")
         return redirect('users:dashboard')
+    
+    if existing_reverse:
+        if existing_reverse.is_active:
+            # Check if this is a mutual swap - if so, auto-accept the existing request
+            is_mutual = False
+            if hasattr(request.user, 'profile') and request.user.profile.school and hasattr(request.user, 'swappreference') and \
+               hasattr(target_user, 'profile') and target_user.profile.school and hasattr(target_user, 'swappreference'):
+                from home.triangle_swap_utils import get_current_county, wants_county
+                
+                requester_county = get_current_county(request.user)
+                target_county = get_current_county(target_user)
+                
+                if requester_county and target_county:
+                    requester_wants_target = wants_county(request.user, target_county)
+                    target_wants_requester = wants_county(target_user, requester_county)
+                    is_mutual = requester_wants_target and target_wants_requester
+            
+            if is_mutual and not existing_reverse.accepted:
+                # Auto-accept the existing reverse request since it's mutual
+                existing_reverse.accepted = True
+                existing_reverse.save()
+                messages.success(request, f"🎉 Mutual swap detected! You and {target_user.get_full_name() or target_user.email} both want each other's locations. Swap automatically accepted!")
+            else:
+                messages.info(request, f"{target_user.get_full_name() or target_user.email} has already sent you a swap request. Please check your received requests.")
+        else:
+            # Reactivate the reverse request
+            existing_reverse.is_active = True
+            existing_reverse.accepted = False
+            existing_reverse.save()
+            messages.info(request, f"Swap request from {target_user.get_full_name() or target_user.email} has been reactivated.")
+        return redirect('users:dashboard')
+    
+    # Check for mutual/2-way swap interest
+    is_mutual_swap = False
+    if hasattr(request.user, 'profile') and request.user.profile.school and hasattr(request.user, 'swappreference') and \
+       hasattr(target_user, 'profile') and target_user.profile.school and hasattr(target_user, 'swappreference'):
+        from home.triangle_swap_utils import get_current_county, wants_county
+        
+        # Get current counties
+        requester_county = get_current_county(request.user)
+        target_county = get_current_county(target_user)
+        
+        if requester_county and target_county:
+            # Check if requester wants target's location AND target wants requester's location
+            requester_wants_target = wants_county(request.user, target_county)
+            target_wants_requester = wants_county(target_user, requester_county)
+            
+            is_mutual_swap = requester_wants_target and target_wants_requester
     
     try:
         with transaction.atomic():
-            # Create a new swap for the current user
-            swap = Swaps.objects.create(
-                user=request.user,
-                gender=request.user.profile.gender if hasattr(request.user, 'profile') else 'Any',
-                boarding=request.user.profile.school.boarding if hasattr(request.user, 'profile') and hasattr(request.user.profile, 'school') else 'Any',
-                county=request.user.profile.school.ward.constituency.county if hasattr(request.user, 'profile') and hasattr(request.user.profile, 'school') and hasattr(request.user.profile.school, 'ward') else None,
-                constituency=request.user.profile.school.ward.constituency if hasattr(request.user, 'profile') and hasattr(request.user.profile, 'school') and hasattr(request.user.profile.school, 'ward') else None,
-                ward=request.user.profile.school.ward if hasattr(request.user, 'profile') and hasattr(request.user.profile, 'school') and hasattr(request.user.profile.school, 'ward') else None,
-                status=True
+            # Create a swap request
+            swap_request = SwapRequests.objects.create(
+                requester=request.user,
+                target=target_user,
+                is_active=True,
+                accepted=is_mutual_swap  # Auto-accept if mutual
             )
             
-            # Create a swap request for the target user
-            SwapRequests.objects.create(
-                user=target_user,
-                swap=swap,
-                is_active=True
-            )
-            
-            messages.success(request, f"Swap request sent to {target_user.username} successfully!")
+            if is_mutual_swap:
+                messages.success(request, f"🎉 Mutual swap detected! Swap request automatically accepted with {target_user.get_full_name() or target_user.email}.")
+            else:
+                messages.success(request, f"Swap request sent to {target_user.get_full_name() or target_user.email} successfully!")
             
     except Exception as e:
         messages.error(request, f"An error occurred while initiating the swap: {str(e)}")
@@ -1611,24 +1874,46 @@ def admin_delete_user_view(request, user_id):
 def accept_swap_request(request, request_id):
     """
     View to accept a swap request.
+    Also checks if this is a mutual/2-way swap.
     """
-    swap_request = get_object_or_404(SwapRequests, id=request_id, swap__user=request.user, is_active=True, accepted=False)
+    swap_request = get_object_or_404(SwapRequests, id=request_id, target=request.user, is_active=True, accepted=False)
+    
+    # Check if this is a mutual/2-way swap
+    is_mutual_swap = False
+    if hasattr(swap_request.requester, 'profile') and swap_request.requester.profile.school and hasattr(swap_request.requester, 'swappreference') and \
+       hasattr(swap_request.target, 'profile') and swap_request.target.profile.school and hasattr(swap_request.target, 'swappreference'):
+        from home.triangle_swap_utils import get_current_county, wants_county
+        
+        # Get current counties
+        requester_county = get_current_county(swap_request.requester)
+        target_county = get_current_county(swap_request.target)
+        
+        if requester_county and target_county:
+            # Check if requester wants target's location AND target wants requester's location
+            requester_wants_target = wants_county(swap_request.requester, target_county)
+            target_wants_requester = wants_county(swap_request.target, requester_county)
+            
+            is_mutual_swap = requester_wants_target and target_wants_requester
     
     with transaction.atomic():
-        # Update the swap request
+        # Mark the request as accepted
         swap_request.accepted = True
+        swap_request.is_active = True  # Keep it active
         swap_request.save()
         
-        # Update the swap status
-        swap = swap_request.swap
-        swap.status = False  # Mark swap as inactive
-        swap.save()
+        # Deactivate all other pending requests between these users
+        SwapRequests.objects.filter(
+            Q(requester=swap_request.requester, target=swap_request.target) |
+            Q(requester=swap_request.target, target=swap_request.requester),
+            is_active=True,
+            accepted=False
+        ).exclude(id=request_id).update(is_active=False)
         
-        # Deactivate all other requests for this swap
-        SwapRequests.objects.filter(swap=swap, is_active=True, accepted=False).update(is_active=False)
-        
-        # Send notification to the requester
-        messages.success(request, 'You have accepted the swap request.')
+        # Send notification
+        if is_mutual_swap:
+            messages.success(request, f'🎉 Mutual swap confirmed! You and {swap_request.requester.get_full_name() or swap_request.requester.email} both want each other\'s locations.')
+        else:
+            messages.success(request, f'You have accepted the swap request from {swap_request.requester.get_full_name() or swap_request.requester.email}.')
     
     return redirect('users:dashboard')
 
@@ -1637,14 +1922,14 @@ def reject_swap_request(request, request_id):
     """
     View to reject a swap request.
     """
-    swap_request = get_object_or_404(SwapRequests, id=request_id, swap__user=request.user, is_active=True, accepted=False)
+    swap_request = get_object_or_404(SwapRequests, id=request_id, target=request.user, is_active=True, accepted=False)
     
     with transaction.atomic():
         # Mark the request as inactive
         swap_request.is_active = False
         swap_request.save()
         
-        messages.info(request, 'You have rejected the swap request.')
+        messages.info(request, f'You have rejected the swap request from {swap_request.requester.get_full_name() or swap_request.requester.email}.')
     
     return redirect('users:dashboard')
 
@@ -1653,14 +1938,14 @@ def cancel_swap_request(request, request_id):
     """
     View to cancel a swap request sent by the current user.
     """
-    swap_request = get_object_or_404(SwapRequests, id=request_id, user=request.user, is_active=True, accepted=False)
+    swap_request = get_object_or_404(SwapRequests, id=request_id, requester=request.user, is_active=True, accepted=False)
     
     with transaction.atomic():
         # Mark the request as inactive
         swap_request.is_active = False
         swap_request.save()
         
-        messages.info(request, 'You have cancelled the swap request.')
+        messages.info(request, f'You have cancelled the swap request to {swap_request.target.get_full_name() or swap_request.target.email}.')
     
     return redirect('users:dashboard')
 
@@ -1671,18 +1956,18 @@ def swap_requests(request):
     """
     # Get all active swap requests sent by the user
     sent_requests = SwapRequests.objects.filter(
-        user=request.user, 
+        requester=request.user, 
         is_active=True
     ).select_related(
-        'swap', 'swap__user__profile'
+        'target__profile'
     ).order_by('-created_at')
     
     # Get all active swap requests received by the user
     received_requests = SwapRequests.objects.filter(
-        swap__user=request.user, 
+        target=request.user, 
         is_active=True
     ).select_related(
-        'user__profile', 'swap'
+        'requester__profile'
     ).order_by('-created_at')
     
     context = {

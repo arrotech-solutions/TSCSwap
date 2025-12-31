@@ -186,22 +186,22 @@
                 <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                     <div>
                         <h3 style="margin: 0 0 10px 0; color: #e2e8f0; font-size: 16px;">
-                            {% if request.user.profile.first_name or request.user.profile.last_name %}
-                                {{ request.user.profile.first_name }} {{ request.user.profile.last_name }}
+                            {% if request.requester.profile.first_name or request.requester.profile.last_name %}
+                                {{ request.requester.profile.first_name }} {{ request.requester.profile.last_name }}
                             {% else %}
-                                {{ request.user.email }}
+                                {{ request.requester.email }}
                             {% endif %}
                         </h3>
                         <p style="margin: 0 0 5px 0; color: #94a3b8; font-size: 14px;">
                             Requested on {{ request.created_at|date:"F j, Y" }}
                         </p>
-                        {% if request.user.profile.phone %}
+                        {% if request.requester.profile.phone %}
                         <div class="flex items-center" style="margin: 5px 0;">
                             <span style="color: #94a3b8; font-size: 14px; margin-right: 5px;">Phone:</span>
                             <span class="bg-slate-700/50 px-2 py-1 rounded text-sm font-mono" style="color: #e2e8f0;">
-                                {{ request.user.profile.phone|mask_phone }}
+                                {{ request.requester.profile.phone|mask_phone }}
                             </span>
-                            <button onclick="copyToClipboard('{{ request.user.profile.phone }}')" 
+                            <button onclick="copyToClipboard('{{ request.requester.profile.phone }}')" 
                                     class="ml-2 text-blue-400 hover:text-blue-300 transition-colors"
                                     title="Copy phone number">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -210,9 +210,9 @@
                             </button>
                         </div>
                         {% endif %}
-                        {% if request.user.profile.tsc_number %}
+                        {% if request.requester.profile.tsc_number %}
                         <p style="margin: 5px 0; color: #94a3b8; font-size: 14px;">
-                            TSC Number: {{ request.user.profile.tsc_number }}
+                            TSC Number: {{ request.requester.profile.tsc_number }}
                         </p>
                         {% endif %}
                     </div>

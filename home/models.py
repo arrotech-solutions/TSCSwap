@@ -126,14 +126,19 @@ class Swaps(models.Model):
         return f"{self.user}"
 
 class SwapRequests(models.Model):
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    swap = models.ForeignKey(Swaps, on_delete=models.CASCADE)
+    requester = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_swap_requests')
+    target = models.ForeignKey(User, on_delete=models.CASCADE, related_name='received_swap_requests')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     is_active = models.BooleanField(default=True)
     accepted = models.BooleanField(default=False)
+    
+    class Meta:
+        unique_together = [['requester', 'target']]
+        ordering = ['-created_at']
+    
     def __str__(self):
-        return f"{self.user} - {self.swap}"
+        return f"{self.requester} -> {self.target}"
 
 
 class SwapPreference(models.Model):

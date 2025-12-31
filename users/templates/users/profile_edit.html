@@ -137,7 +137,7 @@
                 </div>
                 <div class="ml-3">
                     <p class="text-sm text-yellow-200">
-                        Please complete your profile by adding your phone number and TSC number to start getting swap opportunities.
+                        Please complete your profile by adding your phone number to start getting swap opportunities.
                     </p>
                 </div>
             </div>
@@ -198,25 +198,18 @@
                 <div class="space-y-4 pt-6 border-t border-gray-700">
                     <h2 class="text-xl font-semibold text-gray-200 mb-4">Account Information</h2>
                     
-                    <!-- Email -->
+                    <!-- Email (Read-only) -->
                     <div>
-                        <label for="{{ form.email.id_for_label }}" class="form-label">
+                        <label class="form-label">
                             Email Address
                         </label>
                         <input type="email" 
-                               id="{{ form.email.id_for_label }}" 
-                               name="{{ form.email.name }}" 
-                               value="{{ form.email.value|default:'' }}"
-                               class="form-input"
-                               placeholder="your.email@example.com">
-                        {% if form.email.errors %}
-                            <div class="form-error">
-                                {% for error in form.email.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        <p class="form-helper">This will be used for login and notifications</p>
+                               value="{{ user.email }}"
+                               class="form-input bg-gray-700 cursor-not-allowed"
+                               placeholder="your.email@example.com"
+                               readonly
+                               disabled>
+                        <p class="form-helper">Email cannot be changed. Contact support if you need to update your email address.</p>
                     </div>
                     
                     <!-- Phone Number -->
@@ -343,32 +336,6 @@
                                 {% endif %}
                             </div>
                         </div>
-                    </div>
-                    
-                    <!-- TSC Number -->
-                    <div class="{% if form.tsc_number.errors %}bg-red-900 bg-opacity-20 p-4 rounded-lg border-l-4 border-red-500{% endif %}">
-                        <div class="flex items-center justify-between">
-                            <label for="{{ form.tsc_number.id_for_label }}" class="form-label">
-                                TSC Number <span class="text-red-400">*</span>
-                            </label>
-                            {% if form.tsc_number.errors %}
-                                <span class="text-sm text-red-400">Required</span>
-                            {% endif %}
-                        </div>
-                        <input type="text" 
-                               id="{{ form.tsc_number.id_for_label }}" 
-                               name="{{ form.tsc_number.name }}" 
-                               value="{{ form.tsc_number.value|default:'' }}"
-                               class="form-input"
-                               placeholder="Enter your TSC number">
-                        {% if form.tsc_number.errors %}
-                            <div class="form-error">
-                                {% for error in form.tsc_number.errors %}
-                                    <p>{{ error }}</p>
-                                {% endfor %}
-                            </div>
-                        {% endif %}
-                        <p class="form-helper">{{ form.tsc_number.help_text }}</p>
                     </div>
                     
                     <!-- Profile Picture -->

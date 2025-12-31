@@ -10,7 +10,6 @@
         max-width: 1400px;
         margin: 0 auto;
         color: #e2e8f0;
-        background-color: #1a202c;
         min-height: 100vh;
     }
     .stats-container {
@@ -20,10 +19,10 @@
         flex-wrap: wrap;
     }
     .stat-card {
-        background: #2d3748;
+        background: transparent;
+        border: 1px solid rgba(148, 163, 184, 0.2);
         border-radius: 8px;
         padding: 1.5rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         flex: 1;
         min-width: 200px;
         color: #e2e8f0;
@@ -41,9 +40,9 @@
         color: #ffffff;
     }
     .table-container {
-        background: #2d3748;
+        background: transparent;
+        border: 1px solid rgba(148, 163, 184, 0.2);
         border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
         overflow: hidden;
     }
     .user-table {
@@ -53,20 +52,20 @@
     .user-table th, .user-table td {
         padding: 1rem;
         text-align: left;
-        border-bottom: 1px solid #4a5568;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
         color: #e2e8f0;
     }
     .user-table th {
-        background-color: #2d3748;
-        color: #a0aec0;
+        background-color: transparent;
+        color: #94a3b8;
         font-weight: 600;
         text-transform: uppercase;
         font-size: 0.75rem;
         letter-spacing: 0.05em;
-        border-bottom: 2px solid #4a5568;
+        border-bottom: 2px solid rgba(148, 163, 184, 0.2);
     }
     .user-table tr:hover {
-        background-color: #4a5568;
+        background-color: rgba(148, 163, 184, 0.05);
     }
     .status-active {
         color: #38a169;
@@ -84,13 +83,14 @@
         font-weight: 600;
     }
     .badge-primary {
-        background-color: #2b6cb0;
-        color: #ebf8ff;
+        background-color: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+        border: 1px solid rgba(59, 130, 246, 0.3);
     }
     .badge-secondary {
-        background-color: #4a5568;
-        color: #e2e8f0;
-        border: 1px solid #718096;
+        background-color: rgba(148, 163, 184, 0.15);
+        color: #cbd5e1;
+        border: 1px solid rgba(148, 163, 184, 0.3);
     }
     .text-muted {
         color: #718096;
@@ -106,12 +106,15 @@
         transition: background-color 0.2s;
     }
     .action-buttons a.btn-view-matches {
-        background-color: #2b6cb0;
-        color: white;
-        padding: 0.25rem 0.75rem;
+        background-color: rgba(59, 130, 246, 0.15);
+        color: #60a5fa;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        transition: all 0.2s;
     }
     .action-buttons a.btn-view-matches:hover {
-        background-color: #2c5282;
+        background-color: rgba(59, 130, 246, 0.25);
+        border-color: rgba(59, 130, 246, 0.5);
         text-decoration: none;
     }
     .action-buttons a:hover {
@@ -128,7 +131,7 @@
 
 {% block content %}
 <div class="user-management">
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">User Management</h1>
+    <h1 class="text-3xl font-bold text-white mb-8">User Management</h1>
     
     <div class="stats-container">
         <div class="stat-card">
@@ -149,7 +152,7 @@
                     <th>Contact</th>
                     <th>Location</th>
                     <th>Level</th>
-                    <th>Subjects</th>
+                    <th>Triangle Swaps</th>
                     <th>Potential Matches</th>
                     <th>Actions</th>
                 </tr>
@@ -174,15 +177,10 @@
                     </td>
                     <td>{% if user.school %}{{ user.school.level }}{% else %}-{% endif %}</td>
                     <td>
-                        {% if user.subjects %}
-                            {% for subject in user.subjects|slice:":2" %}
-                                <span class="badge badge-secondary">{{ subject }}</span>
-                            {% endfor %}
-                            {% if user.subjects|length > 2 %}
-                                <span class="badge badge-secondary">+{{ user.subjects|length|add:"-2" }} more</span>
-                            {% endif %}
+                        {% if user.triangle_swaps > 0 %}
+                            <span class="badge badge-primary">{{ user.triangle_swaps }} triangle{{ user.triangle_swaps|pluralize }}</span>
                         {% else %}
-                            <span class="text-muted">-</span>
+                            <span class="text-muted">None</span>
                         {% endif %}
                     </td>
                     <td>
@@ -193,11 +191,10 @@
                         {% endif %}
                     </td>
                    
-                    <td class="action-buttons space-y-2">
-                        <a href="{% url 'users_admin:user_potential_matches' user.id %}" class="block w-full text-center py-1 px-3 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm mb-2">
+                    <td class="action-buttons">
+                        <a href="{% url 'users_admin:user_potential_matches' user.id %}" class="btn-view-matches block w-full text-center rounded text-sm">
                             View Matches
                         </a>
-                        {# WhatsApp button removed as requested #}
                     </td>
                 </tr>
                 {% endfor %}

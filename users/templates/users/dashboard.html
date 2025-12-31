@@ -1,6 +1,7 @@
 {% extends "users/base.html" %}
 {% load static %}
 {% load profile_checks match_helpers %}
+{% load custom_filters %}
 
 {% block title %}Dashboard · TSC Swap{% endblock %}
 
@@ -212,7 +213,10 @@
                                 </svg>
                                 Subjects Taught
                             </h3>
-                            <span class="text-xs font-medium text-purple-400">{{ user.mysubject_set.count }} subjects</span>
+                            <span class="text-xs font-medium text-purple-400">
+                                {% get_total_subject_count user as total_subject_count %}
+                                {{ total_subject_count }} subject{{ total_subject_count|pluralize }}
+                            </span>
                         </div>
                         
                         {% if user.mysubject_set.exists %}
@@ -347,6 +351,86 @@
                 {% endif %}
             </div>
 
+            <!-- Triangle Swaps Section -->
+            {% if profile_complete and has_triangle_swaps %}
+            <div class="bg-slate-800 rounded-lg p-6 shadow mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        Triangle Swap Opportunities
+                    </h2>
+                    <span class="px-2 py-1 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400">
+                        {{ triangle_swaps|length }} found
+                    </span>
+                </div>
+                
+                <p class="text-sm text-gray-400 mb-4">
+                    You're part of a triangle swap! Three teachers exchange locations in a circular pattern.
+                </p>
+
+                {% for triangle in triangle_swaps %}
+                <div class="bg-slate-700/50 rounded-lg p-4 mb-4 border border-slate-600">
+                    <div class="flex items-center justify-center mb-4">
+                        <div class="flex items-center space-x-2">
+                            <div class="flex flex-col items-center">
+                                <div class="w-12 h-12 rounded-full {% if triangle.teacher_a.is_current_user %}bg-blue-600{% else %}bg-slate-600{% endif %} flex items-center justify-center text-white font-semibold">
+                                    A
+                                </div>
+                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_a.is_current_user %}You{% else %}{{ triangle.teacher_a.name|truncatewords:2 }}{% endif %}</span>
+                            </div>
+                            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            <div class="flex flex-col items-center">
+                                <div class="w-12 h-12 rounded-full {% if triangle.teacher_b.is_current_user %}bg-blue-600{% else %}bg-slate-600{% endif %} flex items-center justify-center text-white font-semibold">
+                                    B
+                                </div>
+                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_b.is_current_user %}You{% else %}{{ triangle.teacher_b.name|truncatewords:2 }}{% endif %}</span>
+                            </div>
+                            <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                            </svg>
+                            <div class="flex flex-col items-center">
+                                <div class="w-12 h-12 rounded-full {% if triangle.teacher_c.is_current_user %}bg-blue-600{% else %}bg-slate-600{% endif %} flex items-center justify-center text-white font-semibold">
+                                    C
+                                </div>
+                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_c.is_current_user %}You{% else %}{{ triangle.teacher_c.name|truncatewords:2 }}{% endif %}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center justify-between p-2 bg-slate-800/50 rounded">
+                            <span class="text-gray-400">{% if triangle.teacher_a.is_current_user %}You{% else %}{{ triangle.teacher_a.name|truncatewords:1 }}{% endif %} (A)</span>
+                            <span class="text-white font-medium">{{ triangle.teacher_a.current_location }} → {{ triangle.teacher_a.wants_location }}</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-800/50 rounded">
+                            <span class="text-gray-400">{% if triangle.teacher_b.is_current_user %}You{% else %}{{ triangle.teacher_b.name|truncatewords:1 }}{% endif %} (B)</span>
+                            <span class="text-white font-medium">{{ triangle.teacher_b.current_location }} → {{ triangle.teacher_b.wants_location }}</span>
+                        </div>
+                        <div class="flex items-center justify-between p-2 bg-slate-800/50 rounded">
+                            <span class="text-gray-400">{% if triangle.teacher_c.is_current_user %}You{% else %}{{ triangle.teacher_c.name|truncatewords:1 }}{% endif %} (C)</span>
+                            <span class="text-white font-medium">{{ triangle.teacher_c.current_location }} → {{ triangle.teacher_c.wants_location }}</span>
+                        </div>
+                    </div>
+
+                    {% if is_secondary_level and triangle.common_subjects %}
+                    <div class="mt-3 pt-3 border-t border-slate-600">
+                        <p class="text-xs text-gray-400 mb-2">Common Subjects:</p>
+                        <div class="flex flex-wrap gap-2">
+                            {% for subject in triangle.common_subjects %}
+                            <span class="px-2 py-1 rounded text-xs bg-purple-900/40 text-purple-300">{{ subject }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
             <!-- Swap Requests -->
             <div class="bg-slate-800 rounded-lg p-6 shadow mb-6">
                 <h2 class="text-lg font-semibold text-white mb-4">Swap Requests</h2>
@@ -364,7 +448,13 @@
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <h4 class="font-medium text-white">
-                                            {{ request.user.get_full_name|default:request.user.username }}
+                                            {% if request.requester.get_full_name %}
+                                                {{ request.requester.get_full_name }}
+                                            {% elif request.requester.profile.first_name %}
+                                                {{ request.requester.profile.first_name }}{% if request.requester.profile.surname %} {{ request.requester.profile.surname }}{% elif request.requester.profile.last_name %} {{ request.requester.profile.last_name }}{% endif %}
+                                            {% else %}
+                                                {{ request.requester.username|default:request.requester.email }}
+                                            {% endif %}
                                         </h4>
                                         <p class="text-xs text-gray-400">
                                             {{ request.created_at|timesince }} ago
@@ -413,7 +503,13 @@
                                 <div class="flex justify-between items-start">
                                     <div>
                                         <h4 class="font-medium text-white">
-                                            {{ request.swap.user.get_full_name|default:request.swap.user.username }}
+                                            {% if request.target.get_full_name %}
+                                                {{ request.target.get_full_name }}
+                                            {% elif request.target.profile.first_name %}
+                                                {{ request.target.profile.first_name }}{% if request.target.profile.surname %} {{ request.target.profile.surname }}{% elif request.target.profile.last_name %} {{ request.target.profile.last_name }}{% endif %}
+                                            {% else %}
+                                                {{ request.target.username|default:request.target.email }}
+                                            {% endif %}
                                         </h4>
                                         <p class="text-xs text-gray-400">
                                             {{ request.created_at|timesince }} ago

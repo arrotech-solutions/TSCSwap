@@ -1,4 +1,5 @@
 from django import template
+from home.models import MySubject
 
 register = template.Library()
 
@@ -19,3 +20,11 @@ def mask_phone(phone_number):
     
     # Format with spaces for better readability
     return ' '.join([masked[i:i+4] for i in range(0, len(masked), 4)])
+
+@register.simple_tag
+def get_total_subject_count(user):
+    """Count total subjects across all MySubject objects for a user."""
+    total = 0
+    for mysubject in user.mysubject_set.all():
+        total += mysubject.subject.count()
+    return total

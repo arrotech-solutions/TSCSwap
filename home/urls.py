@@ -10,6 +10,8 @@ app_name = 'home'
 urlpatterns = [
     # Error page (for testing and direct access)
     path("error/", error_page, name="error_page"),
+    # Privacy Policy (required for Facebook/Meta WhatsApp Business API)
+    path("privacy-policy/", views.privacy_policy, name="privacy_policy"),
     # Regular views
     path("", views.landing_page, name="home"),
     path("mysubject/new/", login_required(views.create_mysubject), name="create_mysubject"),

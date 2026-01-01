@@ -11,6 +11,7 @@ class IntentType(Enum):
     FIND_SWAPS = "find_swaps"
     REQUEST_CALL = "request_call"
     UPDATE_PREFERENCE = "update_swap_preference"
+    ASK_QUESTION = "ask_question"  # General questions about swaps, TSC transfers, etc.
     UNKNOWN = "unknown"
 
 class IntentDetector:
@@ -76,7 +77,10 @@ Your task is to analyze user messages and determine their intent. The possible i
 4. update_swap_preference: User wants to update, change, modify, or edit their preferences, settings, location, subject, school, grade, or class.
    Examples: "update my preferences", "change my location to Nairobi", "modify my subject", "edit my school preference"
 
-5. unknown: The message doesn't clearly match any of the above intents or is unclear, ambiguous, or unrelated to TSC Swap.
+5. ask_question: User is asking a question about swaps, TSC transfers, how the platform works, requirements, process, or any general inquiry about teacher swaps.
+   Examples: "how does swapping work?", "what are the requirements?", "how do I swap?", "what is a triangle swap?", "how long does it take?", "what documents do I need?"
+
+6. unknown: The message doesn't clearly match any of the above intents or is unclear, ambiguous, or unrelated to TSC Swap.
 
 Additionally, extract relevant entities from the message:
 - location: Any location mentioned (county, city, area, school name, etc.)
@@ -119,6 +123,7 @@ Only include entities if they are clearly mentioned in the message. Use null if 
                 "find_swaps": IntentType.FIND_SWAPS,
                 "request_call": IntentType.REQUEST_CALL,
                 "update_swap_preference": IntentType.UPDATE_PREFERENCE,
+                "ask_question": IntentType.ASK_QUESTION,
                 "unknown": IntentType.UNKNOWN
             }
             

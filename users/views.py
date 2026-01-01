@@ -214,11 +214,16 @@ def profile_view(request, user_id=None):
         name_parts.append(profile.last_name)
     full_name = ' '.join(name_parts) if name_parts else user.email
     
+    # Check if viewing own profile
+    is_own_profile = (user == request.user)
+    
     context = {
         'profile': profile,
         'school': school,
         'subjects': subjects,
-        'full_name': full_name
+        'full_name': full_name,
+        'profile_user': user,  # The user whose profile is being viewed
+        'is_own_profile': is_own_profile
     }
     return render(request, 'users/profile.html', context)
 
@@ -783,6 +788,36 @@ def dashboard(request):
         'has_school': has_profile and hasattr(user.profile, 'school') and user.profile.school is not None,
         'has_swap_preference': swap_preference is not None,
     }
+    
+    # Get user's chat history (WhatsApp conversations)
+    try:
+        from chat.models import UserQuery, AIResponse
+        user_chats = UserQuery.objects.filter(user=user).select_related('ai_response').order_by('-created_at')[:20]
+        
+        # Format chats with responses
+        chat_history = []
+        for query in user_chats:
+            try:
+                response = query.ai_response
+                chat_history.append({
+                    'query': query,
+                    'response': response,
+                    'created_at': query.created_at,
+                })
+            except AIResponse.DoesNotExist:
+                # Query exists but no response yet
+                chat_history.append({
+                    'query': query,
+                    'response': None,
+                    'created_at': query.created_at,
+                })
+        
+        context['chat_history'] = chat_history
+        context['has_chat_history'] = len(chat_history) > 0
+    except Exception as e:
+        print(f"Error fetching chat history: {str(e)}")
+        context['chat_history'] = []
+        context['has_chat_history'] = False
     
     return render(request, 'users/dashboard.html', context)
 

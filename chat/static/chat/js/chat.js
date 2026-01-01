@@ -10,35 +10,74 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendButton = document.getElementById('send-button');
     const typingIndicator = document.getElementById('typing-indicator');
     
+    // Check if all required elements exist
+    if (!chatToggle || !chatContainer) {
+        console.error('Chat widget elements not found');
+        return;
+    }
+    
     // State
     let isExpanded = false;
     
     // Initialize chat
     function initChat() {
         // Start with chat closed (no auto-show)
-        chatContainer.classList.add('opacity-0', 'invisible', 'translate-y-4');
+        if (chatContainer) {
+            chatContainer.style.display = 'none';
+            chatContainer.style.opacity = '0';
+            chatContainer.style.transform = 'translateY(20px)';
+            chatContainer.style.pointerEvents = 'none';
+        }
     }
     
     // Toggle chat visibility
     function toggleChat(e) {
-        e.stopPropagation(); // Prevent event from bubbling up
+        if (e) {
+            e.stopPropagation(); // Prevent event from bubbling up
+            e.preventDefault();
+        }
         
-        if (chatContainer.classList.contains('opacity-0')) {
+        if (!chatContainer) {
+            console.error('Chat container not found');
+            return;
+        }
+        
+        const currentDisplay = window.getComputedStyle(chatContainer).display;
+        const isHidden = currentDisplay === 'none' || chatContainer.style.display === 'none';
+        
+        if (isHidden) {
             // Open chat
-            chatContainer.classList.remove('invisible');
+            chatContainer.style.display = 'flex';
+            chatContainer.style.pointerEvents = 'auto';
+            
             // Force reflow to ensure the transition works
             void chatContainer.offsetWidth;
-            chatContainer.classList.remove('opacity-0', 'translate-y-4');
-            chatContainer.classList.add('opacity-100', 'translate-y-0');
-            userInput.focus();
+            
+            // Trigger transition
+            setTimeout(() => {
+                chatContainer.style.opacity = '1';
+                chatContainer.style.transform = 'translateY(0)';
+                // Scroll to bottom when chat opens
+                scrollToBottom();
+            }, 10);
+            
+            if (userInput) {
+                setTimeout(() => userInput.focus(), 300);
+            }
+            console.log('Chat opened');
         } else {
             // Close chat
-            chatContainer.classList.remove('opacity-100', 'translate-y-0');
-            chatContainer.classList.add('opacity-0', 'translate-y-4');
+            chatContainer.style.opacity = '0';
+            chatContainer.style.transform = 'translateY(20px)';
+            chatContainer.style.pointerEvents = 'none';
+            
             // Hide after animation completes
             setTimeout(() => {
-                chatContainer.classList.add('invisible');
+                if (chatContainer) {
+                    chatContainer.style.display = 'none';
+                }
             }, 300);
+            console.log('Chat closed');
         }
     }
     
@@ -69,47 +108,77 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set up event listeners
     function setupEventListeners() {
         // Toggle chat window
-        chatToggle.addEventListener('click', toggleChat);
+        if (chatToggle) {
+            chatToggle.addEventListener('click', toggleChat);
+        }
         
         // Close chat window
-        closeChat.addEventListener('click', toggleChat);
+        if (closeChat) {
+            closeChat.addEventListener('click', toggleChat);
+        }
         
         // Toggle expand/collapse
-        expandChat.addEventListener('click', function(e) {
-            e.stopPropagation();
-            toggleExpand();
-        });
+        if (expandChat) {
+            expandChat.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleExpand();
+            });
+        }
         
-        // Close chat when clicking outside
+        // Close chat when clicking outside (only if chat is open)
         document.addEventListener('click', function(e) {
-            if (!chatContainer.contains(e.target) && e.target !== chatToggle) {
-                if (!chatContainer.classList.contains('opacity-0')) {
+            if (!chatContainer || !chatToggle) return;
+            
+            // Check if chat is currently open by checking display and opacity
+            const currentDisplay = window.getComputedStyle(chatContainer).display;
+            const currentOpacity = window.getComputedStyle(chatContainer).opacity;
+            const isChatOpen = currentDisplay !== 'none' && currentOpacity !== '0';
+            
+            // Only handle clicks if chat is open
+            if (isChatOpen) {
+                // Don't close if clicking on chat container, toggle button, or any child elements
+                const clickedInsideChat = chatContainer.contains(e.target);
+                const clickedOnToggle = e.target === chatToggle || chatToggle.contains(e.target);
+                
+                // Also check if clicking on navbar or other important elements
+                const clickedOnNavbar = e.target.closest('nav') !== null;
+                
+                if (!clickedInsideChat && !clickedOnToggle && !clickedOnNavbar) {
+                    // Only close if clicking outside chat and not on navbar
                     toggleChat(e);
                 }
             }
         });
         
         // Handle form submission
-        chatForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            sendMessage();
-        });
-        
-        // Send message on button click
-        sendButton.addEventListener('click', function() {
-            sendMessage();
-        });
-        
-        // Send message on Enter key (but allow Shift+Enter for new line)
-        userInput.addEventListener('keydown', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
+        if (chatForm) {
+            chatForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 sendMessage();
-            }
-        });
+            });
+        }
+        
+        // Send message on button click
+        if (sendButton) {
+            sendButton.addEventListener('click', function() {
+                sendMessage();
+            });
+        }
+        
+        // Send message on Enter key (but allow Shift+Enter for new line)
+        if (userInput) {
+            userInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+        }
         
         // Handle window resize
         window.addEventListener('resize', function() {
+            if (!chatContainer) return;
+            
             if (window.innerWidth < 768) { // Mobile view
                 chatContainer.classList.remove('w-96', 'w-[95vw]', 'max-w-[1200px]', 'right-1/2', 'translate-x-1/2');
                 chatContainer.classList.add('w-[calc(100%-2rem)]', 'right-4');
@@ -137,11 +206,17 @@ document.addEventListener('DOMContentLoaded', function() {
         .then(response => response.json())
         .then(data => {
             if (data.chats && data.chats.length > 0) {
-                data.chats.forEach(chat => {
+                // API returns chats in reverse chronological order (newest first)
+                // We want oldest at top, newest at bottom, so reverse the array
+                const chatsInOrder = [...data.chats].reverse();
+                chatsInOrder.forEach(chat => {
                     addMessage(chat.user_message, 'user');
                     addMessage(chat.ai_message, 'ai');
                 });
-                scrollToBottom();
+                // Scroll to bottom after loading history
+                setTimeout(() => {
+                    scrollToBottom();
+                }, 100);
             }
         })
         .catch(error => {
@@ -159,11 +234,14 @@ document.addEventListener('DOMContentLoaded', function() {
         addMessage(message, 'user');
         userInput.value = '';
         
-        // Show loading state
-        setLoadingState(true);
+        // Show typing indicator immediately
+        showTypingIndicator();
         
         // Scroll to bottom
         scrollToBottom();
+        
+        // Show loading state (disables input/button)
+        setLoadingState(true);
         
         // Send message to server
         fetch('/chat/send/', {
@@ -199,7 +277,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Function to format message with links and basic markdown
     function formatMessage(message) {
-        // Escape HTML first to prevent XSS
+        // Check if message already contains HTML tags (from server)
+        const hasHTML = /<[a-z][\s\S]*>/i.test(message);
+        
+        if (hasHTML) {
+            // Message already has HTML from server, use it as-is
+            // The server has already converted WhatsApp formatting to HTML
+            return message;
+        }
+        
+        // For plain text messages, escape HTML and format
         let formatted = message
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -207,7 +294,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Convert markdown-style links [text](url) to HTML links
         formatted = formatted.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(match, text, url) {
-            return '<a href="' + url + '" class="text-teal-400 hover:text-teal-300 underline font-medium">' + text + '</a>';
+            return '<a href="' + url + '" target="_blank" style="color: #60a5fa; text-decoration: underline;">' + text + '</a>';
         });
         
         // Convert newlines to <br>
@@ -222,57 +309,100 @@ document.addEventListener('DOMContentLoaded', function() {
     // Function to add a message to the chat
     function addMessage(message, sender) {
         const messageContainer = document.createElement('div');
-        messageContainer.className = `flex ${sender === 'user' ? 'justify-end' : 'justify-start'}`;
+        messageContainer.className = `message ${sender === 'user' ? 'user-message' : 'ai-message'}`;
         
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `max-w-[80%] px-4 py-3 rounded-lg shadow ${
-            sender === 'user' 
-                ? 'bg-gradient-to-r from-blue-600 to-teal-600 text-white rounded-br-none' 
-                : 'bg-gray-700 text-gray-100 rounded-bl-none'
-        }`;
+        // Avatar
+        const avatar = document.createElement('div');
+        avatar.className = 'message-avatar';
+        const avatarIcon = document.createElement('i');
+        avatarIcon.className = sender === 'user' ? 'fas fa-user' : 'fas fa-robot';
+        avatar.appendChild(avatarIcon);
         
-        const messageContent = document.createElement('div');
-        messageContent.className = 'message-content';
+        // Message content wrapper
+        const messageContentWrapper = document.createElement('div');
+        messageContentWrapper.className = 'message-content';
         
+        // Message bubble
+        const messageBubble = document.createElement('div');
+        messageBubble.className = 'message-bubble';
+        
+        const messageText = document.createElement('p');
         if (sender === 'user') {
-            // User messages are plain text (no need to parse links)
-            messageContent.textContent = message;
+            // User messages are plain text
+            messageText.textContent = message;
         } else {
-            // AI messages may contain links - render as HTML
-            messageContent.innerHTML = formatMessage(message);
+            // AI messages may contain HTML - render as HTML
+            const formattedMessage = formatMessage(message);
+            messageText.innerHTML = formattedMessage;
         }
+        messageBubble.appendChild(messageText);
         
-        const messageMeta = document.createElement('div');
-        messageMeta.className = 'text-xs text-gray-300 mt-1 text-right';
-        messageMeta.textContent = sender === 'user' ? 'You • Just now' : 'TSC Assistant • Just now';
+        // Message time
+        const messageTime = document.createElement('div');
+        messageTime.className = 'message-time';
+        const now = new Date();
+        messageTime.textContent = sender === 'user' ? 'You • Just now' : 'TSC Assistant • Just now';
         
-        messageDiv.appendChild(messageContent);
-        messageDiv.appendChild(messageMeta);
-        messageContainer.appendChild(messageDiv);
+        messageContentWrapper.appendChild(messageBubble);
+        messageContentWrapper.appendChild(messageTime);
+        
+        messageContainer.appendChild(avatar);
+        messageContainer.appendChild(messageContentWrapper);
         
         chatMessages.appendChild(messageContainer);
         scrollToBottom();
     }
     
+    // Show typing indicator
+    function showTypingIndicator() {
+        if (typingIndicator) {
+            typingIndicator.classList.remove('hidden');
+            typingIndicator.style.display = 'flex';
+            // Ensure it's visible
+            typingIndicator.style.visibility = 'visible';
+            typingIndicator.style.opacity = '1';
+            // Scroll to bottom to show typing indicator
+            setTimeout(() => {
+                scrollToBottom();
+            }, 50);
+            console.log('Typing indicator shown');
+        } else {
+            console.error('Typing indicator element not found');
+        }
+    }
+    
+    // Hide typing indicator
+    function hideTypingIndicator() {
+        if (typingIndicator) {
+            typingIndicator.classList.add('hidden');
+            typingIndicator.style.display = 'none';
+            console.log('Typing indicator hidden');
+        }
+    }
+    
     // Set loading state
     function setLoadingState(loading) {
         if (loading) {
-            sendButton.disabled = true;
-            userInput.disabled = true;
-            sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            typingIndicator.classList.remove('hidden');
+            if (sendButton) sendButton.disabled = true;
+            if (userInput) userInput.disabled = true;
+            if (sendButton) sendButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
         } else {
-            sendButton.disabled = false;
-            userInput.disabled = false;
-            sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
-            typingIndicator.classList.add('hidden');
-            userInput.focus();
+            if (sendButton) sendButton.disabled = false;
+            if (userInput) userInput.disabled = false;
+            if (sendButton) sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+            hideTypingIndicator();
+            if (userInput) userInput.focus();
         }
     }
     
     // Scroll to bottom of chat
     function scrollToBottom() {
-        chatMessages.scrollTop = chatMessages.scrollHeight;
+        if (chatMessages) {
+            // Use requestAnimationFrame to ensure DOM is updated
+            requestAnimationFrame(() => {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            });
+        }
     }
     
     // Helper function to get CSRF token
@@ -292,7 +422,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     // Initialize the chat
-    initChat();
-    setupEventListeners();
-    loadChatHistory();
+    if (chatToggle && chatContainer) {
+        initChat();
+        setupEventListeners();
+        loadChatHistory();
+        
+        // Debug: Log that chat is initialized
+        console.log('Chat widget initialized');
+    } else {
+        console.error('Chat widget elements missing:', {
+            chatToggle: !!chatToggle,
+            chatContainer: !!chatContainer
+        });
+    }
 });

@@ -1,6 +1,6 @@
 {% extends 'users/base.html' %}
 
-{% block title %}Profile - {{ user.get_full_name|default:user.username }}{% endblock %}
+{% block title %}Profile - {{ profile_user.get_full_name|default:profile_user.username }}{% endblock %}
 
 {% block content %}
 <div class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-800 py-20">
@@ -22,26 +22,27 @@
                 <!-- Profile Info -->
                 <div class="flex-1 text-center md:text-left">
                     <h1 class="text-3xl font-bold text-white mb-2">
-                        {{ full_name|default:user.email }}
+                        {{ full_name|default:profile_user.email }}
                     </h1>
                     <!-- Email and ID hidden for privacy -->
                     <!-- Role Badge -->
-                    {% if user.role %}
+                    {% if profile_user.role %}
                         <span class="inline-flex items-center px-4 py-2 bg-teal-900/30 text-teal-400 text-sm font-medium rounded-full border border-teal-800">
                             <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
                             </svg>
-                            {{ user.get_role_display }}
+                            {{ profile_user.get_role_display }}
                         </span>
                     {% endif %}
                     
                     <!-- Member Since -->
                     <p class="text-sm text-gray-400 mt-4">
-                        Member since {{ user.date_joined|date:"F Y" }}
+                        Member since {{ profile_user.date_joined|date:"F Y" }}
                     </p>
                 </div>
                 
                 <!-- Action Buttons -->
+                {% if is_own_profile %}
                 <div class="flex flex-col gap-3">
                     <a href="{% url 'users:profile_edit' %}" class="bg-gradient-to-r from-teal-600 to-blue-600 hover:from-teal-500 hover:to-blue-500 text-white px-6 py-3 rounded-lg font-semibold transition-all duration-300 shadow-lg hover:shadow-xl flex items-center gap-2 transform hover:-translate-y-0.5">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -51,6 +52,7 @@
                     </a>
                 
                 </div>
+                {% endif %}
             </div>
         </div>
 
@@ -140,7 +142,7 @@
                             <div>
                                 <p class="text-sm text-gray-400">Email Verified</p>
                                 <p class="font-medium text-gray-200">
-                                    {% if user.is_active %}
+                                    {% if profile_user.is_active %}
                                         <span class="text-green-600">✓ Verified</span>
                                     {% else %}
                                         <span class="text-red-600">✗ Not verified</span>

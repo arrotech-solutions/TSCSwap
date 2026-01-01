@@ -2,6 +2,7 @@ import os
 import re
 import requests
 import json
+from difflib import get_close_matches
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -57,6 +58,15 @@ class WhatsAppClient:
 # Initialize the WhatsApp client
 whatsapp_client = WhatsAppClient()
 
+# Log configuration on startup
+print("\n" + "="*50)
+print("WhatsApp Client Configuration:")
+print("="*50)
+print(f"Phone Number ID: {whatsapp_client.phone_number_id}")
+print(f"Access Token: {'✅ Set' if whatsapp_client.access_token else '❌ Missing'}")
+print(f"Verify Token: {whatsapp_client.verify_token}")
+print("="*50 + "\n")
+
 def is_greeting(message: str) -> bool:
     """Check if the message is a greeting."""
     if not message:
@@ -92,6 +102,13 @@ I'm here to help you with teacher swap opportunities. Here's what I can do:
    • Find matching teachers
    • Discover exchange opportunities
 
+❓ *Ask Questions*
+   • How swaps work
+   • TSC transfer process
+   • Requirements and documents
+   • Triangle swaps
+   • Safety and verification
+
 📞 *Request Support*
    • Get a callback from our team
    • Contact support
@@ -101,12 +118,16 @@ I'm here to help you with teacher swap opportunities. Here's what I can do:
    • Update your subject preferences
    • Modify your swap settings
 
-Just send me a message and I'll help you! 😊
+*About TSC Swap:*
+We're an organization that helps teachers find swap mates and verify information to keep off scammers. We're not TSC, but we help guide you through the process! 😊
+
+Just send me a message and I'll help you!
 
 For example:
 • "Show my profile"
 • "Find swaps in Nairobi"
-• "Update my preferences"
+• "How do swaps work?"
+• "What documents do I need?"
 """
 
 def normalize_phone_number(phone: str) -> str:
@@ -189,31 +210,193 @@ def get_user_by_phone(phone_number: str):
         print(f"❌ Error getting user by phone: {str(e)}\n{traceback.format_exc()}")
     return None
 
-def find_swaps_by_location(location: str, user_level, asking_user) -> list:
+def get_profile_completeness_links(user) -> str:
+    """
+    Check profile completeness and return formatted message with links to incomplete sections.
+    
+    Returns:
+        Formatted string with links to incomplete profile sections, or empty string if complete
+    """
+    try:
+        from users.models import PersonalProfile
+        from home.models import SwapPreference, MySubject
+        
+        missing_sections = []
+        
+        # Check if profile exists
+        try:
+            profile = user.profile
+        except PersonalProfile.DoesNotExist:
+            missing_sections.append({
+                'name': 'Profile',
+                'link': 'https://www.tscswap.com/users/profile/edit/',
+                'description': 'Complete your personal profile'
+            })
+            return format_missing_sections_message(missing_sections)
+        
+        # Check if school is linked
+        if not profile.school:
+            missing_sections.append({
+                'name': 'School Information',
+                'link': None,  # Special case - need to contact admin
+                'description': 'Contact admin to link your school',
+                'admin_contact': '+254742134431'
+            })
+        
+        # Check if level is set
+        if not profile.level:
+            missing_sections.append({
+                'name': 'Teaching Level',
+                'link': 'https://www.tscswap.com/mysubject/new/',
+                'description': 'Set your teaching level'
+            })
+        
+        # Check if swap preferences are set
+        try:
+            if not hasattr(user, 'swappreference') or not user.swappreference:
+                missing_sections.append({
+                    'name': 'Swap Preferences',
+                    'link': 'https://www.tscswap.com/preferences/',
+                    'description': 'Set your swap preferences'
+                })
+        except Exception:
+            missing_sections.append({
+                'name': 'Swap Preferences',
+                'link': 'https://www.tscswap.com/preferences/',
+                'description': 'Set your swap preferences'
+            })
+        
+        # Check if subjects are set (for secondary/high school teachers only)
+        if profile.level and ('secondary' in profile.level.name.lower() or 'high' in profile.level.name.lower()):
+            try:
+                my_subjects = MySubject.objects.filter(user=user).first()
+                if not my_subjects or not my_subjects.subject.exists():
+                    missing_sections.append({
+                        'name': 'Teaching Subjects',
+                        'link': 'https://www.tscswap.com/mysubject/new/',
+                        'description': 'Add your teaching subjects'
+                    })
+            except Exception:
+                missing_sections.append({
+                    'name': 'Teaching Subjects',
+                    'link': 'https://www.tscswap.com/mysubject/new/',
+                    'description': 'Add your teaching subjects'
+                })
+        
+        if missing_sections:
+            return format_missing_sections_message(missing_sections)
+        
+        return ""
+        
+    except Exception as e:
+        print(f"Error checking profile completeness: {str(e)}")
+        return ""
+
+def format_missing_sections_message(missing_sections: list) -> str:
+    """
+    Format a message with links to missing profile sections.
+    
+    Args:
+        missing_sections: List of dicts with 'name', 'link', 'description', and optionally 'admin_contact'
+    
+    Returns:
+        Formatted string with links
+    """
+    if not missing_sections:
+        return ""
+    
+    message = "\n\n⚠️ *Complete Your Profile*\n\n"
+    message += "To find better matches, please complete the following:\n\n"
+    
+    for i, section in enumerate(missing_sections, 1):
+        if section.get('admin_contact'):
+            # Special case for school information
+            message += f"{i}️⃣ *{section['name']}*\n"
+            message += f"   {section['description']}\n"
+            message += f"   📧 Inbox school information to admin: {section['admin_contact']}\n\n"
+        else:
+            message += f"{i}️⃣ *{section['name']}*\n"
+            message += f"   {section['description']}\n"
+            message += f"   🔗 {section['link']}\n\n"
+    
+    return message
+
+def find_similar_counties(location: str, limit: int = 3) -> list:
+    """
+    Find similar county names using fuzzy matching.
+    
+    Args:
+        location: The location string to match
+        limit: Maximum number of suggestions to return
+    
+    Returns:
+        List of county name strings that are similar to the input
+    """
+    try:
+        from home.models import Counties
+        
+        # Get all county names
+        all_counties = list(Counties.objects.values_list('name', flat=True))
+        
+        if not all_counties:
+            return []
+        
+        # Use difflib to find close matches
+        # cutoff=0.6 means at least 60% similarity
+        similar = get_close_matches(
+            location.lower(),
+            [county.lower() for county in all_counties],
+            n=limit,
+            cutoff=0.5
+        )
+        
+        # Map back to original case county names
+        county_map = {c.lower(): c for c in all_counties}
+        return [county_map[match] for match in similar if match in county_map]
+    except Exception as e:
+        print(f"Error finding similar counties: {str(e)}")
+        return []
+
+def find_swaps_by_location(location: str, user_level, asking_user, counties_list=None) -> tuple:
     """
     Find users who teach in a specific location and share the same teaching level.
     
     Args:
-        location: Location name (e.g., "Nairobi")
+        location: Location name (e.g., "Nairobi") - optional if counties_list is provided
         user_level: The Level object of the asking user
         asking_user: The User object who is asking for swaps
+        counties_list: List of County objects to search in (optional, overrides location)
     
     Returns:
-        List of User objects matching the criteria
+        Tuple of (list of User objects, error_info dict)
+        error_info contains:
+        - 'no_counties_found': bool - True if no counties matched the location
+        - 'suggestions': list - List of suggested county names if no match found
     """
     try:
         from users.models import PersonalProfile
         from home.models import Counties, Schools
         
+        error_info = {'no_counties_found': False, 'suggestions': []}
+        
         if not user_level:
-            return []
+            return [], error_info
         
-        # Find counties matching the location name (case-insensitive)
-        counties = Counties.objects.filter(name__icontains=location) if location else Counties.objects.none()
-        
-        if not counties.exists() and location:
-            print(f"⚠️ No counties found matching: {location}")
-            return []
+        # Use counties_list if provided, otherwise find counties by location name
+        if counties_list:
+            counties = Counties.objects.filter(id__in=[c.id for c in counties_list])
+            print(f"🔍 Using {counties.count()} counties from swap preferences")
+        elif location:
+            # Find counties matching the location name (case-insensitive)
+            counties = Counties.objects.filter(name__icontains=location)
+            if not counties.exists():
+                print(f"⚠️ No counties found matching: {location}")
+                error_info['no_counties_found'] = True
+                error_info['suggestions'] = find_similar_counties(location, limit=3)
+                return [], error_info
+        else:
+            # No location and no counties_list provided
+            return [], error_info
         
         # Find schools in those counties (through ward → constituency → county)
         # Schools are linked: school.ward.constituency.county
@@ -222,7 +405,8 @@ def find_swaps_by_location(location: str, user_level, asking_user) -> list:
             level=user_level  # Same teaching level
         ).select_related('ward__constituency__county', 'level')
         
-        print(f"🔍 Found {schools_query.count()} schools in {location} at level {user_level.name}")
+        location_text = location or f"{counties.count()} preferred county/counties"
+        print(f"🔍 Found {schools_query.count()} schools in {location_text} at level {user_level.name}")
         
         # Find users who teach at those schools and have the same level
         matching_users = PersonalProfile.objects.filter(
@@ -237,12 +421,12 @@ def find_swaps_by_location(location: str, user_level, asking_user) -> list:
         
         print(f"✅ Found {matching_users.count()} matching users")
         
-        return list(matching_users)
+        return list(matching_users), error_info
         
     except Exception as e:
         import traceback
         print(f"❌ Error finding swaps by location: {str(e)}\n{traceback.format_exc()}")
-        return []
+        return [], {'no_counties_found': False, 'suggestions': []}
 
 def mask_phone_number(phone: str) -> str:
     """Mask phone number for privacy (e.g., +254712345678 → +2547***5678)."""
@@ -296,6 +480,8 @@ def find_triangle_swaps_for_whatsapp(asking_user, location: str, user_level) -> 
         from users.models import PersonalProfile
         
         # Check if user has complete profile and swap preferences
+        # Note: We don't return error messages here as triangle swaps are optional
+        # The main swap search will handle profile completeness checks
         if not hasattr(asking_user, 'profile') or not asking_user.profile.school:
             return ""
         
@@ -439,7 +625,7 @@ def find_triangle_swaps_for_whatsapp(asking_user, location: str, user_level) -> 
         print(f"Error finding triangle swaps for WhatsApp: {str(e)}\n{traceback.format_exc()}")
         return ""
 
-def format_swap_results(matching_profiles, location: str, user_level) -> str:
+def format_swap_results(matching_profiles, location: str, user_level, using_preferences: bool = False) -> str:
     """Format swap results for WhatsApp response. Returns up to 10 results with masked phones."""
     try:
         if not matching_profiles:
@@ -451,13 +637,18 @@ def format_swap_results(matching_profiles, location: str, user_level) -> str:
         
         results = []
         results.append(f"""🔍 *Swap Opportunities Found*
-
+        
 Detected Intent: Find Swaps ✅
 📍 Location: {location or 'Any location'}
-📚 Level: {user_level.name if user_level else 'Not set'}
-
+📚 Level: {user_level.name if user_level else 'Not set'}""")
+        
+        # Add message if using preferences
+        if using_preferences:
+            results.append("\nℹ️ Since you didn't specify a location, I used your swap preferences.")
+        
+        results.append(f"""
 Found {total_count} matching teacher(s):
-
+        
 ━━━━━━━━━━━━━━━━━━━━""")
         
         for i, profile in enumerate(profiles_to_show, 1):
@@ -523,11 +714,12 @@ def format_profile_data(user, phone_number: str) -> str:
         try:
             profile = user.profile
         except PersonalProfile.DoesNotExist:
-            return """❌ *Profile Not Found*
+            completeness_msg = get_profile_completeness_links(user)
+            return f"""❌ *Profile Not Found*
 
 Your account exists, but you haven't set up your personal profile yet.
 
-Please log in to your TSC Swap account and complete your profile setup to view your information here."""
+Please log in to your TSC Swap account and complete your profile setup to view your information here.{completeness_msg}"""
         
         # Build name
         name_parts = []
@@ -613,6 +805,11 @@ Please log in to your TSC Swap account and complete your profile setup to view y
 
 Need to update your profile? Log in to your TSC Swap account! 😊"""
         
+        # Add profile completeness check
+        completeness_msg = get_profile_completeness_links(user)
+        if completeness_msg:
+            response += completeness_msg
+        
         return response
         
     except Exception as e:
@@ -624,7 +821,105 @@ I encountered an error while loading your profile information. Please try again 
 
 Error: {str(e)}"""
 
-def generate_response(message: str, intent: IntentType, entities: dict, phone_number: str = None) -> str:
+def answer_swap_question(question: str, user=None, conversation_history=None) -> str:
+    """
+    Answer questions about swaps, TSC transfers, and the platform using OpenAI.
+    
+    Args:
+        question: The user's question
+        user: The User object (optional, for conversation history)
+        conversation_history: List of previous messages in format [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]
+    
+    Returns:
+        A helpful answer to the question
+    """
+    try:
+        from openai import OpenAI
+        import os
+        from dotenv import load_dotenv
+        from chat.models import UserQuery, AIResponse
+        
+        load_dotenv()
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        
+        if not openai_api_key:
+            return """❌ I'm having trouble accessing my knowledge base right now. Please try again later or contact our support team."""
+        
+        client = OpenAI(api_key=openai_api_key)
+        
+        # System prompt that clarifies the organization's role
+        system_prompt = """You are a helpful assistant for TSC Swap, an organization that helps teachers find suitable swap mates and verify information to keep off scammers.
+
+IMPORTANT CONTEXT:
+- TSC Swap is NOT the Teachers Service Commission (TSC)
+- We are an independent organization that helps teachers find swap opportunities
+- We verify teacher information to prevent scams and fraud
+- We help teachers connect with potential swap partners across Kenya's 47 counties
+- We provide guidance on the TSC transfer process but are not TSC itself
+
+Your role is to answer questions about:
+- How teacher swaps work
+- The TSC transfer process (as a helpful guide, not as TSC)
+- How to use the TSC Swap platform
+- Requirements for swaps
+- Triangle swaps (circular 3-teacher exchanges)
+- Safety and verification measures
+- General questions about finding swap partners
+
+Be friendly, helpful, and accurate. Always clarify that TSC Swap is a helping organization, not TSC itself. Keep answers concise and WhatsApp-friendly (use emojis appropriately)."""
+        
+        # Prepare messages with conversation history
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        # Add conversation history if provided (last 5 messages = 5 user + 5 assistant = 10 messages total)
+        if conversation_history:
+            messages.extend(conversation_history)
+        
+        # Add current question
+        messages.append({"role": "user", "content": question})
+        
+        # Call OpenAI with web search if available (using GPT-4 with browsing or similar)
+        # For now, we'll use GPT-3.5-turbo and add web search results if needed
+        try:
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                temperature=0.7,
+                max_tokens=500
+            )
+            
+            answer = response.choices[0].message.content.strip()
+            
+            # Add a friendly footer
+            answer += "\n\n💡 *Need more help?* Just ask me anything about swaps, or try:\n• \"Find swaps in [location]\"\n• \"Show my profile\"\n• \"How do I update my preferences?\""
+            
+            return answer
+            
+        except Exception as e:
+            print(f"Error getting answer from OpenAI: {str(e)}")
+            return f"""I understand you're asking about: "{question}"
+
+I'm here to help with questions about teacher swaps and the TSC transfer process!
+
+TSC Swap is an organization that helps teachers find swap mates and verify information to keep off scammers. We're not TSC, but we help guide you through the process.
+
+For specific questions, you can:
+• Ask me about how swaps work
+• Ask about requirements and documents
+• Ask about the transfer process
+• Search for swaps in your preferred location
+
+What would you like to know? 😊"""
+            
+    except Exception as e:
+        print(f"Error in answer_swap_question: {str(e)}")
+        return f"""I'd love to help answer your question, but I'm having a technical issue right now.
+
+Please try asking again, or contact our support team for assistance.
+
+Remember: TSC Swap helps teachers find swap mates and verify information. We're here to help! 😊"""
+
+def generate_response(message: str, intent: IntentType, entities: dict, phone_number: str = None, conversation_history: list = None) -> str:
     """Generate an appropriate response based on intent and message."""
     intent_name = intent.value.replace("_", " ").title()
     
@@ -673,14 +968,14 @@ Need help? Just ask! 😊"""
         
         if not user:
             return f"""🔍 *Finding Swap Opportunities*
-
-Detected Intent: {intent_name} ✅
-
-❌ I couldn't find your profile linked to this WhatsApp number.
-
-To find swaps, please make sure your phone number in your TSC Swap profile matches this WhatsApp number.
-
-You can update your phone number by logging in to your account."""
+        
+        Detected Intent: {intent_name} ✅
+        
+        ❌ I couldn't find your profile linked to this WhatsApp number.
+        
+        To find swaps, please make sure your phone number in your TSC Swap profile matches this WhatsApp number.
+        
+        You can update your phone number by logging in to your account."""
         
         # Get user's teaching level
         try:
@@ -688,51 +983,213 @@ You can update your phone number by logging in to your account."""
             user_level = user_profile.level if user_profile and user_profile.level else None
             
             if not user_level:
+                completeness_msg = get_profile_completeness_links(user)
                 return f"""🔍 *Finding Swap Opportunities*
-
-Detected Intent: {intent_name} ✅
-
-❌ Your profile doesn't have a teaching level set.
-
-Please log in to your TSC Swap account and set your teaching level to find matching swaps."""
+        
+        Detected Intent: {intent_name} ✅
+        
+        ❌ Your profile doesn't have a teaching level set.
+        
+        Please log in to your TSC Swap account and set your teaching level to find matching swaps.{completeness_msg}"""
         except Exception as e:
             print(f"Error getting user profile: {str(e)}")
             return f"""🔍 *Finding Swap Opportunities*
-
-Detected Intent: {intent_name} ✅
-
-❌ Error loading your profile. Please try again later."""
+        
+        Detected Intent: {intent_name} ✅
+        
+        ❌ Error loading your profile. Please try again later."""
+        
+        # Check if location is provided, if not, use swap preferences
+        using_preferences = False
+        preference_counties = []
+        preference_county_names = []
+        
+        if not location:
+            # Try to get swap preferences
+            try:
+                if hasattr(user, 'swappreference') and user.swappreference:
+                    swap_pref = user.swappreference
+                    
+                    # Collect counties from desired_county and open_to_all
+                    if swap_pref.desired_county:
+                        preference_counties.append(swap_pref.desired_county)
+                        preference_county_names.append(swap_pref.desired_county.name)
+                    
+                    # Add open_to_all counties
+                    open_to_all_counties = swap_pref.open_to_all.all()
+                    for county in open_to_all_counties:
+                        if county not in preference_counties:
+                            preference_counties.append(county)
+                            preference_county_names.append(county.name)
+                    
+                    if preference_counties:
+                        using_preferences = True
+                        print(f"✅ Using swap preferences: {len(preference_counties)} counties")
+            except Exception as e:
+                print(f"Error getting swap preferences: {str(e)}")
         
         # Find matching swaps
         try:
-            matching_users = find_swaps_by_location(location, user_level, user)
+            if using_preferences:
+                matching_users, error_info = find_swaps_by_location(None, user_level, user, counties_list=preference_counties)
+                search_location = ", ".join(preference_county_names[:3])
+                if len(preference_county_names) > 3:
+                    search_location += f" +{len(preference_county_names) - 3} more"
+            else:
+                matching_users, error_info = find_swaps_by_location(location, user_level, user)
+                search_location = location
             
-            # Find triangle swaps if location is provided
+            # Find triangle swaps if location or preferences are provided
             triangle_swaps_text = ""
-            if location:
-                triangle_swaps_text = find_triangle_swaps_for_whatsapp(user, location, user_level)
+            if location or using_preferences:
+                # For triangle swaps, use the first county name if using preferences
+                triangle_location = location if location else (preference_county_names[0] if preference_county_names else None)
+                if triangle_location:
+                    triangle_swaps_text = find_triangle_swaps_for_whatsapp(user, triangle_location, user_level)
             
             # Build response
             if matching_users:
-                response = format_swap_results(matching_users, location, user_level)
+                response = format_swap_results(matching_users, search_location, user_level, using_preferences=using_preferences)
                 
                 # Append triangle swaps if found
                 if triangle_swaps_text:
                     response += f"\n\n━━━━━━━━━━━━━━━━━━━━\n\n{triangle_swaps_text}"
             else:
-                response = f"""🔍 *Finding Swap Opportunities*
-
-Detected Intent: {intent_name} ✅
-📍 Location: {location or 'Any location'}
-📚 Level: {user_level.name if user_level else 'Not set'}
-
-❌ No direct matching swaps found.
-
-I couldn't find any teachers in {location or 'your specified location'} who teach at the same level as you ({user_level.name if user_level else 'your level'}).
-
-Try:
-• Searching in a different location
-• Checking if your teaching level is correctly set in your profile"""
+                # Check if location was not found
+                if error_info.get('no_counties_found') and location:
+                    suggestions = error_info.get('suggestions', [])
+                    if suggestions:
+                        suggestions_text = "\n".join([f"   • {s}" for s in suggestions])
+                        response = f"""🔍 *Finding Swap Opportunities*
+        
+        Detected Intent: {intent_name} ✅
+        📍 Location: {location}
+        📚 Level: {user_level.name if user_level else 'Not set'}
+        
+        ❌ Location not found: "{location}"
+        
+        Did you mean one of these?
+{suggestions_text}
+        
+        Try searching again with the correct county name! 😊"""
+                    else:
+                        response = f"""🔍 *Finding Swap Opportunities*
+        
+        Detected Intent: {intent_name} ✅
+        📍 Location: {location}
+        📚 Level: {user_level.name if user_level else 'Not set'}
+        
+        ❌ Location not found: "{location}"
+        
+        Please check the spelling and try again. Make sure you're using a valid Kenyan county name.
+        
+        Examples:
+        • Nairobi
+        • Mombasa
+        • Kisumu
+        • Nakuru"""
+                elif using_preferences:
+                    response = f"""🔍 *Finding Swap Opportunities*
+        
+        Detected Intent: {intent_name} ✅
+        📍 Using Your Swap Preferences: {search_location}
+        📚 Level: {user_level.name if user_level else 'Not set'}
+        
+        ℹ️ Since you didn't specify a location, I used your swap preferences.
+        
+        ❌ No direct matching swaps found in your preferred counties.
+        
+        Try:
+        • Searching with a specific location (e.g., "Find swaps in Nairobi")
+        • Updating your swap preferences to include more counties
+        • Checking if your teaching level is correctly set in your profile"""
+                    
+                    # Add profile completeness check
+                    completeness_msg = get_profile_completeness_links(user)
+                    if completeness_msg:
+                        response += completeness_msg
+                    
+                    # Append triangle swaps if found
+                    if triangle_swaps_text:
+                        response += f"\n\n━━━━━━━━━━━━━━━━━━━━\n\n{triangle_swaps_text}"
+                elif location:
+                    # Location was provided and found, but no matching swaps
+                    # Check if user is secondary/high school
+                    is_secondary = user_level and ('secondary' in user_level.name.lower() or 'high' in user_level.name.lower())
+                    
+                    if is_secondary:
+                        response = f"""🔍 *Finding Swap Opportunities*
+        
+        Detected Intent: {intent_name} ✅
+        📍 Location: {location}
+        📚 Level: {user_level.name if user_level else 'Not set'}
+        
+        😔 No matching swaps found in {location} right now.
+        
+        For secondary/high school teachers, I look for matches with:
+        • Same teaching level (Secondary/High School)
+        • Common subjects
+        
+        I couldn't find any teachers in {location} who meet both criteria.
+        
+        💡 *Tips to find more matches:*
+        • Try searching in nearby counties
+        • Make sure your subjects are set in your profile
+        • Check back later - new teachers join regularly!
+        
+        Don't worry, we'll keep looking for you! 😊"""
+                        
+                        # Add profile completeness check
+                        completeness_msg = get_profile_completeness_links(user)
+                        if completeness_msg:
+                            response += completeness_msg
+                    else:
+                        response = f"""🔍 *Finding Swap Opportunities*
+        
+        Detected Intent: {intent_name} ✅
+        📍 Location: {location}
+        📚 Level: {user_level.name if user_level else 'Not set'}
+        
+        😔 No matching swaps found in {location} right now.
+        
+        I couldn't find any teachers in {location} who teach at the same level as you ({user_level.name if user_level else 'your level'}).
+        
+        💡 *Tips to find more matches:*
+        • Try searching in nearby counties
+        • Make sure your profile is complete
+        • Check back later - new teachers join regularly!
+        
+        Don't worry, we'll keep looking for you! 😊"""
+                        
+                        # Add profile completeness check
+                        completeness_msg = get_profile_completeness_links(user)
+                        if completeness_msg:
+                            response += completeness_msg
+                    
+                    # Append triangle swaps if found
+                    if triangle_swaps_text:
+                        response += f"\n\n━━━━━━━━━━━━━━━━━━━━\n\n{triangle_swaps_text}"
+                else:
+                    # No location and no preferences - ask user to set preferences or specify location
+                    completeness_msg = get_profile_completeness_links(user)
+                    response = f"""🔍 *Finding Swap Opportunities*
+        
+        Detected Intent: {intent_name} ✅
+        
+        ℹ️ You didn't specify a location, and I couldn't find your swap preferences.
+        
+        To find swaps, please choose one of these options:
+        
+        1️⃣ *Specify a location* in your message:
+           • "Find swaps in Nairobi"
+           • "Find swaps in Mombasa"
+        
+        2️⃣ *Set your swap preferences* in your profile:
+           🔗 https://www.tscswap.com/preferences/
+           
+           This will help me automatically search in your preferred counties when you ask for swaps.
+        
+        📚 Your Level: {user_level.name if user_level else 'Not set'}{completeness_msg}"""
                 
                 # Append triangle swaps if found
                 if triangle_swaps_text:
@@ -744,14 +1201,41 @@ Try:
             import traceback
             print(f"Error finding swaps: {str(e)}\n{traceback.format_exc()}")
             return f"""🔍 *Finding Swap Opportunities*
-
-Detected Intent: {intent_name} ✅
-
-❌ Error searching for swaps. Please try again later.
-
-Error: {str(e)}"""
+        
+        Detected Intent: {intent_name} ✅
+        
+        ❌ Error searching for swaps. Please try again later.
+        
+        Error: {str(e)}"""
     
     elif intent == IntentType.REQUEST_CALL:
+        # Get user by phone number to get their phone for the notification
+        user = None
+        requester_phone = phone_number or "Unknown"
+        
+        if phone_number:
+            user = get_user_by_phone(phone_number)
+            if user:
+                try:
+                    profile = user.profile
+                    if profile and profile.phone:
+                        requester_phone = profile.phone
+                except Exception as e:
+                    print(f"Error getting user phone: {str(e)}")
+        
+        # Send notification to admin via WhatsApp
+        admin_phone = "254742134431"
+        notification_message = f"Callback request from {requester_phone}"
+        
+        try:
+            result = whatsapp_client.send_text_message(admin_phone, notification_message)
+            if result:
+                print(f"✅ Callback notification sent to admin: {admin_phone}")
+            else:
+                print(f"❌ Failed to send callback notification to admin")
+        except Exception as e:
+            print(f"Error sending callback notification: {str(e)}")
+        
         return f"""📞 *Callback Request*
 
 Detected Intent: {intent_name} ✅
@@ -768,8 +1252,8 @@ In the meantime, feel free to ask me any questions about TSC Swap. 😊"""
             updates.append(f"📚 Subject: {entities['subject']}")
         
         response = f"""⚙️ *Update Preferences*
-
-Detected Intent: {intent_name} ✅
+        
+        Detected Intent: {intent_name} ✅
 """
         if updates:
             response += "\n" + "\n".join(updates)
@@ -778,23 +1262,78 @@ Detected Intent: {intent_name} ✅
         
         return response
     
+    elif intent == IntentType.ASK_QUESTION:
+        # Answer questions about swaps, TSC transfers, etc.
+        # Use conversation history if provided, otherwise get it
+        if conversation_history is None:
+            conversation_history = []
+            if phone_number:
+                user = get_user_by_phone(phone_number)
+                if user:
+                    # Get last 5 queries and their responses for context
+                    try:
+                        from chat.models import UserQuery, AIResponse
+                        recent_queries = UserQuery.objects.filter(user=user).order_by('-created_at')[:5]
+                        for query in reversed(recent_queries):  # Oldest first
+                            try:
+                                ai_response = query.ai_response
+                                conversation_history.append({"role": "user", "content": query.message})
+                                conversation_history.append({"role": "assistant", "content": ai_response.message})
+                            except AIResponse.DoesNotExist:
+                                # If no response exists, just add the user message
+                                conversation_history.append({"role": "user", "content": query.message})
+                    except Exception as e:
+                        print(f"Error getting conversation history: {str(e)}")
+        
+        return answer_swap_question(message, user=None, conversation_history=conversation_history)
+    
     else:
-        # Unknown intent - provide helpful guidance
+        # Unknown intent - try to answer as a question if it seems like one
+        if any(word in message.lower() for word in ['how', 'what', 'when', 'where', 'why', 'who', 'can', 'do', 'does', 'is', 'are', '?']):
+            # It looks like a question, try to answer it
+            # Use conversation history if provided, otherwise get it
+            if conversation_history is None:
+                conversation_history = []
+                if phone_number:
+                    user = get_user_by_phone(phone_number)
+                    if user:
+                        # Get last 5 queries and their responses for context
+                        try:
+                            from chat.models import UserQuery, AIResponse
+                            recent_queries = UserQuery.objects.filter(user=user).order_by('-created_at')[:5]
+                            for query in reversed(recent_queries):  # Oldest first
+                                try:
+                                    ai_response = query.ai_response
+                                    conversation_history.append({"role": "user", "content": query.message})
+                                    conversation_history.append({"role": "assistant", "content": ai_response.message})
+                                except AIResponse.DoesNotExist:
+                                    # If no response exists, just add the user message
+                                    conversation_history.append({"role": "user", "content": query.message})
+                        except Exception as e:
+                            print(f"Error getting conversation history: {str(e)}")
+            
+            return answer_swap_question(message, user=None, conversation_history=conversation_history)
+        
+        # Otherwise provide helpful guidance
         return f"""🤔 I received your message: "{message}"
-
-Detected Intent: {intent_name}
 
 I'm here to help with TSC Swap! Here's what I can assist you with:
 
-📋 View your profile information
-🔍 Find swap opportunities
-📞 Request a callback
-⚙️ Update your preferences
+📋 *View your profile information*
+🔍 *Find swap opportunities*
+❓ *Answer questions* about swaps, TSC transfers, requirements, etc.
+📞 *Request a callback*
+⚙️ *Update your preferences*
 
 Try asking me:
 • "Show my profile"
-• "Find swaps"
-• "Update my location"
+• "Find swaps in Nairobi"
+• "How do swaps work?"
+• "What documents do I need?"
+• "What is a triangle swap?"
+
+*About TSC Swap:*
+We're an organization that helps teachers find swap mates and verify information to keep off scammers. We're not TSC, but we help guide you through the process! 😊
 
 Need help? Just ask! 😊"""
 
@@ -802,10 +1341,23 @@ Need help? Just ask! 😊"""
 @require_http_methods(["GET", "POST"])
 def whatsapp_webhook(request):
     """Handle incoming WhatsApp messages and webhook verification."""
-    print("\n=== Incoming Webhook Request ===")
+    # Log immediately when function is called - this confirms the request reached Django
+    import sys
+    print("\n" + "="*50, file=sys.stderr)
+    print("=== FUNCTION CALLED - REQUEST RECEIVED ===", file=sys.stderr)
+    print("="*50, file=sys.stderr)
+    print("\n" + "="*50)
+    print("=== Incoming Webhook Request ===")
+    print("="*50)
     print(f"Method: {request.method}")
+    print(f"Path: {request.path}")
     print(f"GET params: {dict(request.GET)}")
-    print(f"Headers: {dict(request.headers)}")
+    print(f"POST params: {dict(request.POST)}")
+    print(f"Content-Type: {request.content_type}")
+    print(f"Content-Length: {request.headers.get('Content-Length', 'N/A')}")
+    print(f"User-Agent: {request.headers.get('User-Agent', 'N/A')}")
+    print(f"X-Forwarded-For: {request.headers.get('X-Forwarded-For', 'N/A')}")
+    print(f"All Headers: {dict(request.headers)}")
     
     if request.method == "GET":
         try:
@@ -839,20 +1391,69 @@ def whatsapp_webhook(request):
             return HttpResponse(f"Error: {str(e)}", content_type='text/plain', status=500)
     
     elif request.method == "POST":
+        print("\n" + "-"*50)
+        print("=== POST REQUEST RECEIVED ===")
+        print("-"*50)
+        print(f"Request body length: {len(request.body)}")
+        print(f"Request body (first 500 chars): {str(request.body)[:500]}")
+        
         try:
             data = json.loads(request.body)
             print("\n--- Received Webhook Data ---")
             print(json.dumps(data, indent=2))
             
+            # Check if this is a status update (delivery receipts, read receipts, etc.)
+            # These don't have messages but we should still acknowledge them
+            print(f"\n--- Webhook Object Type: {data.get('object', 'unknown')} ---")
+            
             # Process the webhook event
-            for entry in data.get("entry", []):
-                for change in entry.get("changes", []):
+            entries = data.get("entry", [])
+            print(f"\n--- Processing {len(entries)} entry/entries ---")
+            
+            if not entries:
+                print("⚠️ WARNING: No 'entry' found in webhook data!")
+                print(f"Full data structure: {list(data.keys())}")
+                print(f"Full data: {json.dumps(data, indent=2)}")
+                # Still return success for status updates
+                return JsonResponse({"status": "success"}, status=200)
+            
+            for entry_idx, entry in enumerate(entries):
+                print(f"\n--- Processing Entry {entry_idx + 1} ---")
+                changes = entry.get("changes", [])
+                print(f"Found {len(changes)} change(s) in entry")
+                
+                for change_idx, change in enumerate(changes):
+                    print(f"\n--- Processing Change {change_idx + 1} ---")
                     value = change.get("value", {})
+                    print(f"Change keys: {list(value.keys())}")
+                    
+                    # Check metadata for phone number ID
+                    metadata = value.get("metadata", {})
+                    phone_number_id = metadata.get("phone_number_id")
+                    display_phone = metadata.get("display_phone_number")
+                    print(f"📱 Phone Number ID from webhook: {phone_number_id}")
+                    print(f"📱 Display Phone Number: {display_phone}")
+                    print(f"📱 Expected Phone Number ID: {whatsapp_client.phone_number_id}")
+                    
+                    # Verify phone number ID matches (optional check)
+                    if phone_number_id and whatsapp_client.phone_number_id:
+                        if str(phone_number_id) != str(whatsapp_client.phone_number_id):
+                            print(f"⚠️ WARNING: Phone number ID mismatch!")
+                            print(f"   Webhook: {phone_number_id}")
+                            print(f"   Config: {whatsapp_client.phone_number_id}")
+                            print(f"   Continuing anyway...")
                     
                     # Handle messages
                     if "messages" in value:
-                        for message in value.get("messages", []):
+                        messages = value.get("messages", [])
+                        print(f"✅ Found {len(messages)} message(s) in change")
+                        for msg_idx, message in enumerate(messages):
+                            print(f"\n--- Processing Message {msg_idx + 1} ---")
+                            print(f"Message keys: {list(message.keys())}")
+                            print(f"Message type: {message.get('type', 'N/A')}")
+                            
                             if message.get("type") == "text":
+                                print("✅ Message type is 'text' - processing...")
                                 phone_number = message.get("from")
                                 message_text = message.get("text", {}).get("body", "")
                                 
@@ -868,6 +1469,15 @@ def whatsapp_webhook(request):
                                     print("❌ No message text")
                                     continue
                                 
+                                # Get user by phone number (for saving queries)
+                                user = None
+                                if phone_number:
+                                    user = get_user_by_phone(phone_number)
+                                    if user:
+                                        print(f"✅ User found for saving query: {user.email}")
+                                    else:
+                                        print(f"⚠️ User not found for phone {phone_number} - will not save query")
+                                
                                 # Detect intent
                                 try:
                                     intent_detector = get_intent_detector()
@@ -881,8 +1491,55 @@ def whatsapp_webhook(request):
                                     intent = IntentType.UNKNOWN
                                     entities = {}
                                 
-                                # Generate appropriate response (pass phone number for profile lookup)
-                                response_text = generate_response(message_text, intent, entities, phone_number)
+                                # Save user query if user is found (before generating response to get history)
+                                user_query = None
+                                conversation_history = []
+                                if user:
+                                    try:
+                                        from chat.models import UserQuery, AIResponse
+                                        from django.db import transaction
+                                        with transaction.atomic():
+                                            user_query = UserQuery.objects.create(
+                                                user=user,
+                                                message=message_text
+                                            )
+                                            print(f"✅ Saved user query: {user_query.id}")
+                                            
+                                            # Get last 5 queries (excluding current one) for conversation history
+                                            recent_queries = UserQuery.objects.filter(
+                                                user=user
+                                            ).exclude(pk=user_query.pk).order_by('-created_at')[:5]
+                                            
+                                            for query in reversed(recent_queries):  # Oldest first
+                                                try:
+                                                    ai_response = query.ai_response
+                                                    conversation_history.append({"role": "user", "content": query.message})
+                                                    conversation_history.append({"role": "assistant", "content": ai_response.message})
+                                                except AIResponse.DoesNotExist:
+                                                    # If no response exists, just add the user message
+                                                    conversation_history.append({"role": "user", "content": query.message})
+                                            
+                                            print(f"✅ Retrieved {len(conversation_history)} messages for conversation history")
+                                    except Exception as e:
+                                        print(f"Error saving user query or getting history: {str(e)}")
+                                
+                                # Generate appropriate response (pass phone number and conversation history)
+                                # Update generate_response to accept conversation_history if needed
+                                response_text = generate_response(message_text, intent, entities, phone_number, conversation_history=conversation_history)
+                                
+                                # Save AI response if user query was saved
+                                if user_query:
+                                    try:
+                                        from chat.models import AIResponse
+                                        from django.db import transaction
+                                        with transaction.atomic():
+                                            AIResponse.objects.create(
+                                                query=user_query,
+                                                message=response_text
+                                            )
+                                            print(f"✅ Saved AI response for query: {user_query.id}")
+                                    except Exception as e:
+                                        print(f"Error saving AI response: {str(e)}")
                                 
                                 print(f"Sending response: {response_text}")
                                 
@@ -892,16 +1549,37 @@ def whatsapp_webhook(request):
                                     print("Response:", json.dumps(result, indent=2))
                                 else:
                                     print("❌ Failed to send message")
+                                    print("Check WhatsApp API credentials and phone number ID")
+                            else:
+                                print(f"⚠️ Skipping message - type is '{message.get('type')}', not 'text'")
+                    else:
+                        print(f"⚠️ No 'messages' key in value. Available keys: {list(value.keys())}")
+                        # Check if this is a status update
+                        if "statuses" in value:
+                            print("ℹ️ This appears to be a status update (delivery/read receipt), not a message")
+                        else:
+                            print(f"⚠️ Unknown webhook structure. Full value: {json.dumps(value, indent=2)}")
+            
+            print("\n" + "="*50)
+            print("=== Returning Success Response ===")
+            print("="*50)
             
             return JsonResponse({"status": "success"}, status=200)
             
         except json.JSONDecodeError as e:
             error_msg = f"JSON decode error: {str(e)}"
+            print("\n" + "="*50)
+            print("❌ JSON DECODE ERROR")
+            print("="*50)
             print(error_msg)
+            print(f"Request body: {request.body}")
             return JsonResponse({"status": "error", "message": error_msg}, status=400)
         except Exception as e:
             import traceback
             error_msg = f"Error processing webhook: {str(e)}\n{traceback.format_exc()}"
+            print("\n" + "="*50)
+            print("❌ EXCEPTION IN WEBHOOK HANDLER")
+            print("="*50)
             print(error_msg)
             return JsonResponse({"status": "error", "message": str(e)}, status=500)
     

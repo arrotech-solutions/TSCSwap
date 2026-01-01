@@ -1676,3 +1676,10 @@ def my_bookmarks(request):
     
     return render(request, 'home/my_bookmarks.html', context)
 
+
+def privacy_policy(request):
+    """
+    Privacy Policy page that complies with Facebook/Meta requirements for WhatsApp Business API.
+    """
+    return render(request, 'home/privacy_policy.html')
+

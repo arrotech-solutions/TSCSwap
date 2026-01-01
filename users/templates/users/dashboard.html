@@ -51,63 +51,95 @@
 
                 <ul class="space-y-3 text-sm">
                     <!-- Personal Information -->
-                    <li class="flex items-center">
-                        {% if personal_info_complete %}
-                            <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    <li class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            {% if personal_info_complete %}
+                                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">Personal Information</span>
+                            {% else %}
+                                <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">Personal Information</span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'users:profile_edit' %}#personal" class="text-blue-400 hover:text-blue-300 text-xs flex items-center">
+                            <span>{% if personal_info_complete %}Update{% else %}Complete{% endif %}</span>
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="text-gray-300">Personal Information</span>
-                        {% else %}
-                            <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                            <a href="{% url 'users:profile_edit' %}#personal" class="text-blue-400 hover:text-blue-300">Complete Personal Information</a>
-                        {% endif %}
+                        </a>
                     </li>
 
                     <!-- Teaching Information -->
-                    <li class="flex items-center">
-                        {% if teaching_level_complete %}
-                            <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    <li class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            {% if teaching_level_complete %}
+                                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">Teaching Level</span>
+                            {% else %}
+                                <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">Teaching Level</span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'home:create_mysubject' %}" class="text-blue-400 hover:text-blue-300 text-xs flex items-center">
+                            <span>{% if teaching_level_complete %}Update{% else %}Set{% endif %}</span>
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="text-gray-300">Teaching Level</span>
-                        {% else %}
-                            <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                            <a href="{% url 'users:profile_edit' %}#teaching" class="text-blue-400 hover:text-blue-300">Set Teaching Level</a>
-                        {% endif %}
+                        </a>
                     </li>
 
                     <!-- School Information -->
-                    <li class="flex items-center">
-                        {% if user.profile.school %}
-                            <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    <li class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            {% if user.profile.school %}
+                                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">School Information</span>
+                            {% else %}
+                                <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">School Information</span>
+                            {% endif %}
+                        </div>
+                        <a href="https://wa.me/254742134431" target="_blank" rel="noopener noreferrer" class="text-blue-400 hover:text-blue-300 text-xs flex items-center">
+                            <span>Contact Admin</span>
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="text-gray-300">School Information</span>
-                        {% else %}
-                            <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                            <a href="{% url 'users:profile_edit' %}#school" class="text-blue-400 hover:text-blue-300">Add School Information</a>
-                        {% endif %}
+                        </a>
                     </li>
 
                     <!-- Swap Preferences -->
-                    <li class="flex items-center">
-                        {% if preferences_complete %}
-                            <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    <li class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            {% if preferences_complete %}
+                                <svg class="w-4 h-4 text-green-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">Swap Preferences</span>
+                            {% else %}
+                                <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                                </svg>
+                                <span class="text-gray-300">Swap Preferences</span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'home:swap_preferences' %}" class="text-blue-400 hover:text-blue-300 text-xs flex items-center">
+                            <span>{% if preferences_complete %}Update{% else %}Set Up{% endif %}</span>
+                            <svg class="w-3 h-3 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
                             </svg>
-                            <span class="text-gray-300">Swap Preferences</span>
-                        {% else %}
-                            <svg class="w-4 h-4 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
-                            </svg>
-                            <a href="{% url 'users:profile_edit' %}#preferences" class="text-blue-400 hover:text-blue-300">Set Up Swap Preferences</a>
-                        {% endif %}
+                        </a>
                     </li>
                 </ul>
 
@@ -287,8 +319,69 @@
                     {% endif %}
                 </div>
             </div>
+            <!-- Chat History Section -->
+            {% if has_chat_history %}
+            <div class="bg-slate-800 rounded-lg p-6 shadow">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-semibold text-white flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                        </svg>
+                        Chat History
+                    </h2>
+                    <span class="text-xs text-gray-400">{{ chat_history|length }} conversation{{ chat_history|length|pluralize }}</span>
+                </div>
+                
+                <div class="space-y-4 max-h-96 overflow-y-auto chat-history-scrollbar">
+                    {% for chat in chat_history %}
+                    <div class="bg-slate-700/50 rounded-lg p-4 border border-slate-600/50">
+                        <div class="flex items-start space-x-3">
+                            <!-- User Message -->
+                            <div class="flex-1">
+                                <div class="flex items-center mb-2">
+                                    <div class="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center mr-2">
+                                        <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-medium text-gray-300">You</span>
+                                    <span class="text-xs text-gray-500 ml-2">{{ chat.created_at|timesince }} ago</span>
+                                </div>
+                                <div class="bg-slate-600/50 rounded-lg p-3 mb-3">
+                                    <p class="text-sm text-gray-200 whitespace-pre-wrap">{{ chat.query.message }}</p>
+                                </div>
+                                
+                                <!-- Bot Response -->
+                                {% if chat.response %}
+                                <div class="flex items-center mb-2">
+                                    <div class="w-8 h-8 bg-teal-500/20 rounded-full flex items-center justify-center mr-2">
+                                        <svg class="w-4 h-4 text-teal-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                                        </svg>
+                                    </div>
+                                    <span class="text-xs font-medium text-gray-300">TSC Swap Bot</span>
+                                    <span class="text-xs text-gray-500 ml-2">{{ chat.response.created_at|timesince }} ago</span>
+                                </div>
+                                <div class="bg-teal-500/10 border border-teal-500/20 rounded-lg p-3">
+                                    <p class="text-sm text-gray-200 whitespace-pre-wrap">{{ chat.response.message }}</p>
+                                </div>
+                                {% else %}
+                                <div class="text-xs text-gray-500 italic">No response yet...</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                {% if chat_history|length >= 20 %}
+                <div class="mt-4 text-center">
+                    <p class="text-xs text-gray-400">Showing last 20 conversations</p>
+                </div>
+                {% endif %}
+            </div>
+            {% endif %}
 
-         
         </div>
 
         <!-- Right Column -->
@@ -594,7 +687,6 @@
                     </a>
                 </div>
             </div>
-
         
     </div>
 </div>
@@ -615,6 +707,37 @@
         max-width: 1200px;
         margin: 0 auto;
         padding: 20px;
+    }
+    
+    /* Custom scrollbar styling for chat history */
+    .chat-history-scrollbar::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .chat-history-scrollbar::-webkit-scrollbar-track {
+        background: rgba(30, 41, 59, 0.5);
+        border-radius: 10px;
+        margin: 8px 0;
+    }
+    
+    .chat-history-scrollbar::-webkit-scrollbar-thumb {
+        background: linear-gradient(180deg, rgba(20, 184, 166, 0.6) 0%, rgba(14, 165, 233, 0.6) 100%);
+        border-radius: 10px;
+        border: 2px solid rgba(30, 41, 59, 0.5);
+    }
+    
+    .chat-history-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(180deg, rgba(20, 184, 166, 0.8) 0%, rgba(14, 165, 233, 0.8) 100%);
+    }
+    
+    .chat-history-scrollbar::-webkit-scrollbar-thumb:active {
+        background: linear-gradient(180deg, rgba(20, 184, 166, 1) 0%, rgba(14, 165, 233, 1) 100%);
+    }
+    
+    /* Firefox scrollbar styling */
+    .chat-history-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgba(20, 184, 166, 0.6) rgba(30, 41, 59, 0.5);
     }
 </style>
 {% endblock %}

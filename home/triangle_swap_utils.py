@@ -256,3 +256,5 @@ def find_triangle_swaps_secondary(teachers_queryset):
     return triangle_swaps
 
 
+
+

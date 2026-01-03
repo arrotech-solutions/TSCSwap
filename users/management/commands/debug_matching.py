@@ -95,22 +95,50 @@ class Command(BaseCommand):
             
             users_data.append(data)
         
-        # Print as formatted JSON
+        # Write to file
+        output_file = 'debug_matching_output.json'
+        with open(output_file, 'w') as f:
+            json.dump(users_data, f, indent=2)
+        
+        # Print summary to console
         print("\n" + "="*80)
         print(f"TOTAL ACTIVE TEACHERS: {len(users_data)}")
         print("="*80)
-        print(json.dumps(users_data, indent=2))
+        print(f"\n✅ Data written to: {output_file}")
         print("\n" + "="*80)
         
         # Summary statistics
         has_pref = sum(1 for u in users_data if u.get('has_swappreference'))
         has_school = sum(1 for u in users_data if u.get('school'))
         has_county = sum(1 for u in users_data if u.get('current_county'))
+        has_both = sum(1 for u in users_data if u.get('current_county') and u.get('desired_county'))
         secondary = sum(1 for u in users_data if u.get('school_level') and 'secondary' in u.get('school_level', '').lower())
         
         print(f"\nSTATISTICS:")
         print(f"  Users with SwapPreference: {has_pref}/{len(users_data)}")
         print(f"  Users with School: {has_school}/{len(users_data)}")
-        print(f"  Users with County data: {has_county}/{len(users_data)}")
+        print(f"  Users with Current County: {has_county}/{len(users_data)}")
+        print(f"  Users with BOTH Current & Desired County: {has_both}/{len(users_data)} ⚠️")
         print(f"  Secondary teachers: {secondary}/{len(users_data)}")
+        
+        # Show potential match pairs
+        matchable_users = [u for u in users_data if u.get('current_county') and u.get('desired_county')]
+        print(f"\n📊 MATCHABLE USERS (have both current & desired county): {len(matchable_users)}")
+        
+        if len(matchable_users) >= 2:
+            print("\nLooking for potential matches...")
+            matches_found = 0
+            for i, user_a in enumerate(matchable_users):
+                for user_b in matchable_users[i+1:]:
+                    if (user_a['current_county'] == user_b['desired_county'] and 
+                        user_a['desired_county'] == user_b['current_county']):
+                        matches_found += 1
+                        print(f"\n  ✅ MATCH #{matches_found}:")
+                        print(f"     {user_a['email']}: {user_a['current_county']} → {user_a['desired_county']}")
+                        print(f"     {user_b['email']}: {user_b['current_county']} → {user_b['desired_county']}")
+            
+            if matches_found == 0:
+                print("  ❌ No valid 2-way matches found in production data!")
+                print("     (This explains why matching works locally but not in production)")
+        
         print("="*80 + "\n")

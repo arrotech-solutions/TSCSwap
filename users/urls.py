@@ -21,24 +21,7 @@ urlpatterns = [
     path('admin/users/<int:user_id>/edit/', views.admin_edit_user_view, name='admin_edit_user'),
     path('admin/users/<int:user_id>/delete/', views.admin_delete_user_view, name='admin_delete_user'),
     
-    # Django built-in password reset URLs
-    path('password-reset/', auth_views.PasswordResetView.as_view(
-        template_name='users/password_reset.html',
-        email_template_name='users/password_reset_email.html',
-        subject_template_name='users/password_reset_subject.txt'
-    ), name='password_reset'),
-    
-    path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(
-        template_name='users/password_reset_done.html'
-    ), name='password_reset_done'),
-    
-    path('password-reset-confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(
-        template_name='users/password_reset_confirm.html'
-    ), name='password_reset_confirm'),
-    
-    path('password-reset-complete/', auth_views.PasswordResetCompleteView.as_view(
-        template_name='users/password_reset_complete.html'
-    ), name='password_reset_complete'),
+    # Password reset URLs moved to root urls.py for global access
 
     # Swap functionality
     path('initiate-swap/<int:user_id>/', views.initiate_swap, name='initiate_swap'),

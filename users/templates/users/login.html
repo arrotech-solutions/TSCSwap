@@ -6,23 +6,33 @@
 
 {% block content %}
 <style>
-    main { padding-top: 0 !important; }
+    main {
+        padding-top: 0 !important;
+    }
 </style>
-<div class="min-h-screen bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
+<div
+    class="min-h-screen bg-gray-900 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
     <!-- Background Decorative Elements -->
     <div class="absolute inset-0 -z-10 overflow-hidden">
-        <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"></div>
-        <div class="absolute top-1/4 right-1/4 w-96 h-96 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" style="animation-delay: 2s;"></div>
-        <div class="absolute bottom-1/4 left-1/3 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse" style="animation-delay: 4s;"></div>
+        <div
+            class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse">
+        </div>
+        <div class="absolute top-1/4 right-1/4 w-96 h-96 bg-teal-500 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"
+            style="animation-delay: 2s;"></div>
+        <div class="absolute bottom-1/4 left-1/3 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl opacity-10 animate-pulse"
+            style="animation-delay: 4s;"></div>
     </div>
 
     <div class="max-w-md w-full space-y-8 relative z-10">
         <!-- Header -->
         <div class="text-center">
             <a href="{% url 'home:home' %}" class="inline-block">
-                <div class="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow">
-                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
+                <div
+                    class="mx-auto h-20 w-20 bg-gradient-to-br from-blue-500 to-teal-500 rounded-2xl flex items-center justify-center mb-6 shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-shadow">
+                    <svg class="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                        xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path>
                     </svg>
                 </div>
             </a>
@@ -37,7 +47,7 @@
                 {% if next %}
                 <input type="hidden" name="next" value="{{ next }}">
                 {% endif %}
-                
+
                 <!-- Email Field -->
                 <div>
                     <label for="{{ form.username.id_for_label }}" class="block text-sm font-medium text-gray-300 mb-2">
@@ -46,19 +56,20 @@
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
                             </svg>
                         </div>
-                        <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}" 
-                               class="block w-full pl-10 pr-3 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200" 
-                               placeholder="Enter your email" required>
+                        <input type="text" name="{{ form.username.name }}" id="{{ form.username.id_for_label }}"
+                            class="block w-full pl-10 pr-3 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200"
+                            placeholder="Enter your email" required>
                     </div>
                     {% if form.username.errors %}
-                        <div class="mt-2 text-sm text-red-400">
-                            {% for error in form.username.errors %}
-                                <p>{{ error }}</p>
-                            {% endfor %}
-                        </div>
+                    <div class="mt-2 text-sm text-red-400">
+                        {% for error in form.username.errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 </div>
 
@@ -68,32 +79,35 @@
                         <label for="{{ form.password.id_for_label }}" class="block text-sm font-medium text-gray-300">
                             Password
                         </label>
-                        <a href="{% url 'users:password_reset' %}" class="text-sm text-teal-400 hover:text-teal-300 transition-colors">
+                        <a href="{% url 'password_reset' %}"
+                            class="text-sm text-teal-400 hover:text-teal-300 transition-colors">
                             Forgot password?
                         </a>
                     </div>
                     <div class="relative">
                         <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                             <svg class="h-5 w-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
                             </svg>
                         </div>
-                        <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}" 
-                               class="block w-full pl-10 pr-3 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200" 
-                               placeholder="Enter your password" required>
+                        <input type="password" name="{{ form.password.name }}" id="{{ form.password.id_for_label }}"
+                            class="block w-full pl-10 pr-3 py-3 bg-gray-900/50 border border-gray-600 rounded-xl text-white placeholder-gray-500 focus:ring-2 focus:ring-teal-500 focus:border-transparent transition duration-200"
+                            placeholder="Enter your password" required>
                     </div>
                     {% if form.password.errors %}
-                        <div class="mt-2 text-sm text-red-400">
-                            {% for error in form.password.errors %}
-                                <p>{{ error }}</p>
-                            {% endfor %}
-                        </div>
+                    <div class="mt-2 text-sm text-red-400">
+                        {% for error in form.password.errors %}
+                        <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
                     {% endif %}
                 </div>
 
                 <!-- Remember Me -->
                 <div class="flex items-center">
-                    <input id="remember-me" name="remember-me" type="checkbox" class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-teal-500 focus:ring-teal-500 focus:ring-offset-gray-800">
+                    <input id="remember-me" name="remember-me" type="checkbox"
+                        class="h-4 w-4 bg-gray-700 border-gray-600 rounded text-teal-500 focus:ring-teal-500 focus:ring-offset-gray-800">
                     <label for="remember-me" class="ml-2 block text-sm text-gray-400">
                         Keep me signed in
                     </label>
@@ -101,28 +115,30 @@
 
                 <!-- Error Messages -->
                 {% if form.non_field_errors %}
-                    <div class="bg-red-900/30 border border-red-700/50 rounded-xl p-4">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <h3 class="text-sm font-medium text-red-300">Authentication Error</h3>
-                                <div class="mt-1 text-sm text-red-400">
-                                    {% for error in form.non_field_errors %}
-                                        <p>{{ error }}</p>
-                                    {% endfor %}
-                                </div>
+                <div class="bg-red-900/30 border border-red-700/50 rounded-xl p-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium text-red-300">Authentication Error</h3>
+                            <div class="mt-1 text-sm text-red-400">
+                                {% for error in form.non_field_errors %}
+                                <p>{{ error }}</p>
+                                {% endfor %}
                             </div>
                         </div>
                     </div>
+                </div>
                 {% endif %}
 
                 <!-- Submit Button -->
                 <div>
-                    <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-500 hover:to-teal-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 transition-all duration-200 shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30">
+                    <button type="submit"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-xl text-sm font-semibold text-white bg-gradient-to-r from-blue-600 to-teal-500 hover:from-blue-500 hover:to-teal-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 transition-all duration-200 shadow-lg shadow-teal-500/20 hover:shadow-teal-500/30">
                         Sign In
                     </button>
                 </div>
@@ -142,7 +158,8 @@
 
             <!-- Sign Up Link -->
             <div class="mt-6">
-                <a href="{% url 'users:signup' %}" class="w-full flex justify-center py-3 px-4 border-2 border-teal-500/50 text-sm font-semibold rounded-xl text-teal-400 hover:bg-teal-500/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 transition-all duration-200">
+                <a href="{% url 'users:signup' %}"
+                    class="w-full flex justify-center py-3 px-4 border-2 border-teal-500/50 text-sm font-semibold rounded-xl text-teal-400 hover:bg-teal-500/10 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 transition-all duration-200">
                     Create your account
                 </a>
             </div>
@@ -151,7 +168,7 @@
         <!-- Additional Info -->
         <div class="text-center">
             <p class="text-sm text-gray-500">
-                By signing in, you agree to our 
+                By signing in, you agree to our
                 <a href="#" class="text-teal-400 hover:text-teal-300 transition-colors">Terms of Service</a>
                 and
                 <a href="#" class="text-teal-400 hover:text-teal-300 transition-colors">Privacy Policy</a>
@@ -160,9 +177,11 @@
 
         <!-- Back to Home -->
         <div class="text-center">
-            <a href="{% url 'home:home' %}" class="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors">
+            <a href="{% url 'password_reset' %}"
+                class="inline-flex items-center text-sm text-gray-400 hover:text-white transition-colors">
                 <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
                 Back to Home
             </a>

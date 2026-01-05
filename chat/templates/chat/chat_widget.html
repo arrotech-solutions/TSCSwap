@@ -1,83 +1,80 @@
 {% load static %}
 
-<!-- Chat Toggle Button -->
-<button id="chat-toggle" type="button" style="position: fixed !important; bottom: 24px !important; right: 24px !important; z-index: 9999 !important; pointer-events: auto !important;">
-    <i class="fas fa-comment-dots"></i>
-    <span class="pulse-ring"></span>
-</button>
+<div id="chat-widget-wrapper">
+    <!-- Chat Toggle Button -->
+    <button id="chat-toggle" type="button"
+        style="position: fixed !important; bottom: 24px !important; right: 24px !important; z-index: 9999 !important; pointer-events: auto !important;">
+        <i class="fas fa-comment-dots"></i>
+        <span class="pulse-ring"></span>
+    </button>
 
-<!-- Chat Container -->
-<div id="chat-container" style="position: fixed !important; bottom: 100px !important; right: 24px !important; z-index: 9998 !important; display: none; opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
-    <!-- Header -->
-    <div class="chat-header">
-        <div class="flex items-center space-x-3">
-            <div class="avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div>
-                <h3>TSC Swap Assistant</h3>
-                <p class="status">Online</p>
-            </div>
-        </div>
-        <div class="header-actions">
-            <button id="expand-chat" aria-label="Toggle fullscreen">
-                <i class="fas fa-expand"></i>
-            </button>
-            <button id="close-chat">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    </div>
-    
-    <!-- Messages -->
-    <div id="chat-messages">
-        <!-- Welcome message -->
-        <div class="message ai-message">
-            <div class="message-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="message-content">
-                <div class="message-bubble">
-                    <p>Hello! 👋 I'm your TSC Swap assistant. How can I help you with teacher swaps today?</p>
+    <!-- Chat Container -->
+    <div id="chat-container"
+        style="position: fixed !important; bottom: 100px !important; right: 24px !important; z-index: 9998 !important; display: none; opacity: 0; transform: translateY(20px); transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);">
+        <!-- Header -->
+        <div class="chat-header">
+            <div class="flex items-center space-x-3">
+                <div class="avatar">
+                    <i class="fas fa-robot"></i>
                 </div>
-                <div class="message-time">Just now</div>
-            </div>
-        </div>
-        
-        <!-- Typing indicator (initially hidden) -->
-        <div id="typing-indicator" class="message ai-message hidden">
-            <div class="message-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="message-content">
-                <div class="typing-dots">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                <div>
+                    <h3>TSC Swap Assistant</h3>
+                    <p class="status">Online</p>
                 </div>
             </div>
-        </div>
-    </div>
-    
-    <!-- Input Area -->
-    <div class="chat-input-area">
-        <form id="chat-form">
-            {% csrf_token %}
-            <div class="input-wrapper">
-                <input 
-                    type="text" 
-                    id="user-input" 
-                    placeholder="Type your message..." 
-                    autocomplete="off"
-                    aria-label="Type your message">
-                <button 
-                    type="submit" 
-                    id="send-button"
-                    aria-label="Send message">
-                    <i class="fas fa-paper-plane"></i>
+            <div class="header-actions">
+                <button id="expand-chat" aria-label="Toggle fullscreen">
+                    <i class="fas fa-expand"></i>
+                </button>
+                <button id="close-chat">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
-        </form>
+        </div>
+
+        <!-- Messages -->
+        <div id="chat-messages">
+            <!-- Welcome message -->
+            <div class="message ai-message">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="message-bubble">
+                        <p>Hello! 👋 I'm your TSC Swap assistant. How can I help you with teacher swaps today?</p>
+                    </div>
+                    <div class="message-time">Just now</div>
+                </div>
+            </div>
+
+            <!-- Typing indicator (initially hidden) -->
+            <div id="typing-indicator" class="message ai-message hidden">
+                <div class="message-avatar">
+                    <i class="fas fa-robot"></i>
+                </div>
+                <div class="message-content">
+                    <div class="typing-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <form id="chat-form">
+                {% csrf_token %}
+                <div class="input-wrapper">
+                    <input type="text" id="user-input" placeholder="Type your message..." autocomplete="off"
+                        aria-label="Type your message">
+                    <button type="submit" id="send-button" aria-label="Send message">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </form>
+        </div>
     </div>
 </div>
 

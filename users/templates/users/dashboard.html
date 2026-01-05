@@ -578,7 +578,7 @@
                                     class="w-12 h-12 rounded-full {% if triangle.teacher_b.is_current_user %}bg-blue-600{% else %}bg-slate-600{% endif %} flex items-center justify-center text-white font-semibold">
                                     B
                                 </div>
-                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_b.is_current_user                                     %}You{% else %}{{ triangle.teacher_b.name|truncatewords:2 }}{% endif %}</span>
+                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_b.is_current_user %}You{% else %}{{ triangle.teacher_b.name|truncatewords:2 }}{% endif %}</span>
                             </div>
                             <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -589,29 +589,23 @@
                                     class="w-12 h-12 rounded-full {% if triangle.teacher_c.is_current_user %}bg-blue-600{% else %}bg-slate-600{% endif %} flex items-center justify-center text-white font-semibold">
                                     C
                                 </div>
-                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_c.is_current_user                                     %}You{% else %}{{ triangle.teacher_c.name|truncatewords:2 }}{% endif %}</span>
+                                <span class="text-xs text-gray-400 mt-1">{% if triangle.teacher_c.is_current_user %}You{% else %}{{ triangle.teacher_c.name|truncatewords:2 }}{% endif %}</span>
                             </div>
                         </div>
                     </div>
 
                     <div class="space-y-3 text-sm">
                         <div class="flex items-center justify-between p-2 bg-slate-800/50 rounded">
-                            <span class="text-gray-400">{% if triangle.teacher_a.is_current_user %}You{% else %}{{
-                                triangle.teacher_a.name|truncatewords:1 }}{% endif %} (A)</span>
-                            <span class="text-white font-medium">{{ triangle.teacher_a.current_location }} → {{
-                                triangle.teacher_a.wants_location }}</span>
+                            <span class="text-gray-400">{% if triangle.teacher_a.is_current_user %}You{% else %}{{ triangle.teacher_a.name|truncatewords:1 }}{% endif %} (A)</span>
+                            <span class="text-white font-medium">{{ triangle.teacher_a.current_location }} → {{ triangle.teacher_a.wants_location }}</span>
                         </div>
                         <div class="flex items-center justify-between p-2 bg-slate-800/50 rounded">
-                            <span class="text-gray-400">{% if triangle.teacher_b.is_current_user %}You{% else %}{{
-                                triangle.teacher_b.name|truncatewords:1 }}{% endif %} (B)</span>
-                            <span class="text-white font-medium">{{ triangle.teacher_b.current_location }} → {{
-                                triangle.teacher_b.wants_location }}</span>
+                            <span class="text-gray-400">{% if triangle.teacher_b.is_current_user %}You{% else %}{{ triangle.teacher_b.name|truncatewords:1 }}{% endif %} (B)</span>
+                            <span class="text-white font-medium">{{ triangle.teacher_b.current_location }} → {{ triangle.teacher_b.wants_location }}</span>
                         </div>
                         <div class="flex items-center justify-between p-2 bg-slate-800/50 rounded">
-                            <span class="text-gray-400">{% if triangle.teacher_c.is_current_user %}You{% else %}{{
-                                triangle.teacher_c.name|truncatewords:1 }}{% endif %} (C)</span>
-                            <span class="text-white font-medium">{{ triangle.teacher_c.current_location }} → {{
-                                triangle.teacher_c.wants_location }}</span>
+                            <span class="text-gray-400">{% if triangle.teacher_c.is_current_user %}You{% else %}{{ triangle.teacher_c.name|truncatewords:1 }}{% endif %} (C)</span>
+                            <span class="text-white font-medium">{{ triangle.teacher_c.current_location }} → {{ triangle.teacher_c.wants_location }}</span>
                         </div>
                     </div>
 
@@ -620,8 +614,7 @@
                         <p class="text-xs text-gray-400 mb-2">Common Subjects:</p>
                         <div class="flex flex-wrap gap-2">
                             {% for subject in triangle.common_subjects %}
-                            <span class="px-2 py-1 rounded text-xs bg-purple-900/40 text-purple-300">{{ subject
-                                }}</span>
+                            <span class="px-2 py-1 rounded text-xs bg-purple-900/40 text-purple-300">{{ subject }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -650,10 +643,7 @@
                                     <h4 class="font-medium text-white">
                                         {% if request.requester.get_full_name %}
                                         {{ request.requester.get_full_name }}
-                                        {% elif request.requester.profile.first_name %} {{
-                                        request.requester.profile.first_name }}{% if request.requester.profile.surname                                         %} {{ request.requester.profile.surname }}{% elif
-                                        request.requester.profile.last_name %} {{
-                                        request.requester.profile.last_name }}{% endif %}
+                                        {% elif request.requester.profile.first_name %} {{ request.requester.profile.first_name }}{% if request.requester.profile.surname %} {{ request.requester.profile.surname }}{% elif request.requester.profile.last_name %} {{ request.requester.profile.last_name }}{% endif %}
                                         {% else %}
                                         {{ request.requester.username|default:request.requester.email }}
                                         {% endif %}
@@ -758,23 +748,7 @@
             <div class="bg-slate-800 rounded-lg p-6 shadow">
                 <h2 class="text-lg font-semibold text-white mb-4">Quick Actions</h2>
                 <div class="space-y-3">
-                    <a href="{% url 'home:create_swap' %}"
-                        class="flex items-center justify-between w-full px-4 py-3 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors duration-200 group">
-                        <div class="flex items-center">
-                            <svg class="w-5 h-5 mr-3 text-blue-200" fill="none" stroke="currentColor"
-                                viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                            </svg>
-                            Create New Swap
-                        </div>
-                        <span class="text-blue-200 group-hover:text-white">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                    d="M9 5l7 7-7 7" />
-                            </svg>
-                        </span>
-                    </a>
+                   
                     <a href="{% url 'users:profile_edit' %}"
                         class="flex items-center p-3 rounded-lg hover:bg-slate-700 transition-colors">
                         <div class="p-2 bg-indigo-500/20 rounded-lg mr-3">

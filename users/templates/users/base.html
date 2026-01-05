@@ -266,6 +266,16 @@
                         </svg>
                         <span>Contact</span>
                     </a>
+
+                    <!-- Download App Link -->
+                    <a href="{% static 'app-release.apk' %}" download
+                        class="flex items-center text-gray-300 hover:text-teal-400 font-medium transition duration-300">
+                        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Download App</span>
+                    </a>
                 </div>
 
                 <!-- Desktop Auth Buttons -->
@@ -398,6 +408,16 @@
                                 d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                         </svg>
                         <span>Home</span>
+                    </a>
+
+                    <!-- Download App Link (Mobile) -->
+                    <a href="{% static 'app-release.apk' %}" download
+                        class="flex items-center px-3 py-2 text-gray-300 hover:text-teal-400 hover:bg-gray-700 rounded-md font-medium transition duration-300">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        <span>Download App</span>
                     </a>
 
                     <!-- Admin Section -->
@@ -694,14 +714,28 @@
 
         {% block extra_js %}{% endblock %}
 
-        <!-- Mobile Menu State Management -->
+        <!-- Mobile Menu & Webview Management -->
         <script>
-            // Simple mobile menu state management
             document.addEventListener('DOMContentLoaded', function () {
-                // Only close mobile menu when navigating away from page
+                // 1. Webview Detection & Chat Button Hiding
+                const isWebview = () => {
+                    const ua = window.navigator.userAgent;
+                    const isAndroidWebview = /wv/.test(ua) || ( /Version\/.*Chrome/.test(ua) && !/Edge/.test(ua) );
+                    const isIosWebview = /AppleWebKit/.test(ua) && !/Safari/.test(ua) && !/CriOS/.test(ua) && !/FxiOS/.test(ua);
+                    return isAndroidWebview || isIosWebview;
+                };
+
+                if (isWebview()) {
+                    const chatWrapper = document.getElementById('chat-widget-wrapper');
+                    if (chatWrapper) {
+                        chatWrapper.style.display = 'none';
+                        console.log('Webview detected: Hiding chat widget');
+                    }
+                }
+
+                // 2. Mobile Menu State Management
                 document.addEventListener('visibilitychange', function () {
                     if (document.hidden) {
-                        // Page is being hidden (navigating away)
                         const mobileMenu = document.querySelector('[x-data*="mobileMenuOpen"]');
                         if (mobileMenu && window.Alpine && Alpine.$data) {
                             try {
@@ -709,9 +743,7 @@
                                 if (component && component.mobileMenuOpen) {
                                     component.mobileMenuOpen = false;
                                 }
-                            } catch (e) {
-                                // Alpine.js not ready, ignore
-                            }
+                            } catch (e) { }
                         }
                     }
                 });

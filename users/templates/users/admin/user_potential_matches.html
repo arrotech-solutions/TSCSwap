@@ -627,8 +627,7 @@
                         <h4 class="font-bold text-white">{{ user.full_name }}</h4>
                         <p class="text-sm text-gray-400 mb-2">{{ user.school.name|default:'No School' }}</p>
                         <div class="text-xs text-gray-500">
-                            <i class="fas fa-map-marker-alt mr-1"></i> {{
-                            user.school.county|default:user.preferences.desired_county }}
+                            <i class="fas fa-map-marker-alt mr-1"></i> {{ user.school.county|default:user.preferences.desired_county }}
                         </div>
                     </div>
 
@@ -643,13 +642,11 @@
                         <p class="text-sm text-gray-400 mb-2">{{ match.email }}</p>
                         <p class="text-sm text-gray-300 mb-2">{{ match.school.name|default:'Unknown School' }}</p>
                         <div class="text-xs text-gray-500 mb-2">
-                            <i class="fas fa-map-marker-alt mr-1"></i> {{ match.school.county|default:'Unknown Location'
-                            }}
+                            <i class="fas fa-map-marker-alt mr-1"></i> {{ match.school.county|default:'Unknown Location' }}
                         </div>
                         <div class="flex flex-wrap gap-1 mt-2">
                             {% for subject in match.subjects|slice:":2" %}
-                            <span class="text-[10px] bg-slate-700 text-gray-300 px-2 py-0.5 rounded-full">{{ subject
-                                }}</span>
+                            <span class="text-[10px] bg-slate-700 text-gray-300 px-2 py-0.5 rounded-full">{{ subject }}</span>
                             {% endfor %}
                         </div>
                     </div>
@@ -663,13 +660,11 @@
                         <p class="text-sm text-gray-400 mb-2">{{ match.email }}</p>
                         <p class="text-sm text-gray-300 mb-2">{{ match.school.name|default:'Unknown School' }}</p>
                         <div class="text-xs text-gray-500 mb-2">
-                            <i class="fas fa-map-marker-alt mr-1"></i> {{ match.school.county|default:'Unknown Location'
-                            }}
+                            <i class="fas fa-map-marker-alt mr-1"></i> {{ match.school.county|default:'Unknown Location' }}
                         </div>
                         <div class="flex flex-wrap gap-1 mt-2">
                             {% for subject in match.subjects|slice:":2" %}
-                            <span class="text-[10px] bg-slate-700 text-gray-300 px-2 py-0.5 rounded-full">{{ subject
-                                }}</span>
+                            <span class="text-[10px] bg-slate-700 text-gray-300 px-2 py-0.5 rounded-full">{{ subject }}</span>
                             {% endfor %}
                         </div>
                     </div>

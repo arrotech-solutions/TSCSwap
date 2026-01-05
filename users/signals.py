@@ -21,7 +21,7 @@ def send_user_registration_notification(sender, instance, created, **kwargs):
             
             # Create email message
             email_content = f"""
-🎉 New User Registration on ToursKe
+🎉 New User Registration on TSC Swap
 
 👤 User Information:
 Username: {instance.username}
@@ -42,7 +42,7 @@ Date Registered: {instance.date_joined.strftime('%B %d, %Y at %I:%M %p')}
 - Registration IP: {getattr(instance, 'last_login_ip', 'Not available')}
 
 ---
-This notification was automatically sent from ToursKe when a new user registered.
+This notification was automatically sent from TSC Swap when a new user registered.
             """.strip()
             
             # Send email to admin
@@ -70,12 +70,12 @@ def send_welcome_email_to_user(sender, instance, created, **kwargs):
     """
     if created and instance.email:
         try:
-            subject = 'Welcome to ToursKe! 🎉'
+            subject = 'Welcome to TSC Swap! 🎉'
             
             welcome_message = f"""
 Dear {instance.first_name or instance.username},
 
-🎉 Welcome to ToursKe! We're excited to have you join our community of travel enthusiasts.
+🎉 Welcome to TSC Swap! We're excited to have you join our community of travel enthusiasts.
 
 ✅ Your account has been successfully created with:
 • Username: {instance.username}
@@ -94,7 +94,7 @@ Dear {instance.first_name or instance.username},
 🌐 Visit our website: https://tourske.com
 
 Happy Travels! ✈️
-The ToursKe Team
+The TSC Swap Team
 
 ---
 This is an automated welcome message. Please do not reply to this email.
@@ -128,7 +128,7 @@ def send_profile_completion_notification(sender, instance, created, **kwargs):
                 subject = f'📝 Profile Completed: {instance.user.username}'
                 
                 profile_content = f"""
-📝 User Profile Completed on ToursKe
+📝 User Profile Completed on TSC Swap
 
 👤 User Information:
 Username: {instance.user.username}
@@ -149,7 +149,7 @@ Full Name: {instance.user.get_full_name() or 'Not provided'}
 - Date Joined: {instance.user.date_joined.strftime('%B %d, %Y')}
 
 ---
-This notification was automatically sent from ToursKe when a user completed their profile.
+This notification was automatically sent from TSC Swap when a user completed their profile.
                 """.strip()
                 
                 # Send email to admin

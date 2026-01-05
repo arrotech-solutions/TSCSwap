@@ -341,8 +341,7 @@
                             {% endif %}
                         </div>
                         {% if fast_swap.current_constituency %}
-                        <div class="location-sub">{{ fast_swap.current_constituency.name }}{% if fast_swap.current_ward
-                            %}, {{ fast_swap.current_ward.name }}{% endif %}</div>
+                        <div class="location-sub">{{ fast_swap.current_constituency.name }}{% if fast_swap.current_ward %}, {{ fast_swap.current_ward.name }}{% endif %}</div>
                         {% endif %}
                     </div>
 
@@ -449,8 +448,7 @@
                         <div class="flex justify-between items-start">
                             <div>
                                 <h3 class="font-medium text-white">{{ match.names }} (FastSwap)</h3>
-                                <p class="text-xs text-gray-400">Current: {{ match.current_county.name }} → Want: {{
-                                    match.most_preferred.name }}</p>
+                                <p class="text-xs text-gray-400">Current: {{ match.current_county.name }} → Want: {{ match.most_preferred.name }}</p>
                             </div>
                             <a href="{% url 'home:fast_swap_detail' match.id %}"
                                 class="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">View</a>
@@ -478,9 +476,7 @@
                                 <div class="text-xs text-gray-400 capitalize">{{ triangle.entity_b.type }}</div>
                                 <div class="text-sm font-medium text-white">
                                     {% if triangle.entity_b.type == 'user' %}
-                                    {{
-                                    triangle.entity_b.obj.get_full_name|default:triangle.entity_b.obj.email|truncatechars:15
-                                    }}
+                                    {{ triangle.entity_b.obj.get_full_name|default:triangle.entity_b.obj.email|truncatechars:15 }}
                                     {% else %}
                                     {{ triangle.entity_b.obj.names|truncatechars:15 }}
                                     {% endif %}
@@ -493,9 +489,7 @@
                                 <div class="text-xs text-gray-400 capitalize">{{ triangle.entity_c.type }}</div>
                                 <div class="text-sm font-medium text-white">
                                     {% if triangle.entity_c.type == 'user' %}
-                                    {{
-                                    triangle.entity_c.obj.get_full_name|default:triangle.entity_c.obj.email|truncatechars:15
-                                    }}
+                                    {{ triangle.entity_c.obj.get_full_name|default:triangle.entity_c.obj.email|truncatechars:15 }}
                                     {% else %}
                                     {{ triangle.entity_c.obj.names|truncatechars:15 }}
                                     {% endif %}

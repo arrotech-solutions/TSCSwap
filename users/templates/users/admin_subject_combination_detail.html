@@ -116,11 +116,10 @@
                             <!-- Teacher A -->
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-400">Teacher A</span>
-                                <span class="font-medium text-white">{{
-                                    tri.teacher_a.profile.get_full_name|default:tri.teacher_a.user.email }}</span>
-                                <span class="text-xs text-indigo-400">{{
-                                    tri.teacher_a.school.ward.constituency.county.name }} → {{
-                                    tri.teacher_a.swap_pref.desired_county.name }}</span>
+                                <span class="font-medium text-white">{{ tri.teacher_a.profile.get_full_name|default:tri.teacher_a.user.email }}</span>
+                                <span class="text-xs text-indigo-400">
+                                 {{   tri.teacher_a.school.ward.constituency.county.name }} → 
+                                   {{ tri.teacher_a.swap_pref.desired_county.name }}</span>
                             </div>
 
                             <svg class="w-4 h-4 text-gray-500 mx-2" fill="none" stroke="currentColor"
@@ -132,11 +131,11 @@
                             <!-- Teacher B -->
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-400">Teacher B</span>
-                                <span class="font-medium text-white">{{
-                                    tri.teacher_b.profile.get_full_name|default:tri.teacher_b.user.email }}</span>
-                                <span class="text-xs text-indigo-400">{{
-                                    tri.teacher_b.school.ward.constituency.county.name }} → {{
-                                    tri.teacher_b.swap_pref.desired_county.name }}</span>
+                                <span class="font-medium text-white">
+                                 {{   tri.teacher_b.profile.get_full_name|default:tri.teacher_b.user.email }}</span>
+                                <span class="text-xs text-indigo-400">
+                                    {{ tri.teacher_b.school.ward.constituency.county.name }} → 
+                                  {{  tri.teacher_b.swap_pref.desired_county.name }}</span>
                             </div>
 
                             <svg class="w-4 h-4 text-gray-500 mx-2" fill="none" stroke="currentColor"

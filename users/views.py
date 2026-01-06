@@ -2105,7 +2105,10 @@ def admin_subject_combination_detail(request):
         'profile__level',
         'swappreference',
         'swappreference__desired_county'
-    ).prefetch_related('mysubject_set__subject').distinct()
+    ).prefetch_related(
+        'mysubject_set__subject',
+        'swappreference__open_to_all'
+    ).distinct()
     
     teacher_data = []
     for teacher in teachers:
@@ -2119,6 +2122,16 @@ def admin_subject_combination_detail(request):
             from chat.whatsapp_integration import normalize_phone_number
             normalized_phone = normalize_phone_number(phone)
             whatsapp_url = f'https://wa.me/{normalized_phone}'
+        
+        # Extract ALL desired counties (primary + open_to_all)
+        pref = getattr(teacher, 'swappreference', None)
+        desired_counties = []
+        if pref:
+            if pref.desired_county:
+                desired_counties.append(pref.desired_county.name)
+            for oc in pref.open_to_all.all():
+                if oc.name not in desired_counties:
+                    desired_counties.append(oc.name)
             
         teacher_data.append({
             'user': teacher,
@@ -2126,15 +2139,14 @@ def admin_subject_combination_detail(request):
             'phone': phone,
             'whatsapp_url': whatsapp_url,
             'school': profile.school if profile else None,
-            'swap_pref': getattr(teacher, 'swappreference', None),
+            'swap_pref': pref,
+            'desired_counties': desired_counties,
         })
     
-    # Calculate location analytics
+    # Calculate location analytics (considering ALL desired counties)
     location_counts = {}
     for item in teacher_data:
-        pref = item['swap_pref']
-        if pref and pref.desired_county:
-            county_name = pref.desired_county.name
+        for county_name in item['desired_counties']:
             location_counts[county_name] = location_counts.get(county_name, 0) + 1
             
     # Sort analytics by count descending
@@ -2156,46 +2168,43 @@ def admin_subject_combination_detail(request):
     # Compare every teacher with every other teacher
     for i, teacher_a in enumerate(teacher_data):
         county_a = get_county_name(teacher_a)
-        pref_a = teacher_a['swap_pref']
-        if not county_a or not pref_a or not pref_a.desired_county:
+        if not county_a or not teacher_a['desired_counties']:
             continue
 
         for j, teacher_b in enumerate(teacher_data):
             if i == j: continue
             
             county_b = get_county_name(teacher_b)
-            pref_b = teacher_b['swap_pref']
-            if not county_b or not pref_b or not pref_b.desired_county:
+            if not county_b or not teacher_b['desired_counties']:
                 continue
 
             # Case: Teacher A wants to go to Teacher B's location
-            if pref_a.desired_county.name == county_b:
+            if county_b in teacher_a['desired_counties']:
                 # To be a triangle (instead of mutual), B must NOT want to go to A
-                if pref_b.desired_county.name != county_a:
+                if county_a not in teacher_b['desired_counties']:
                     # We have a chain: A -> B -> Z
                     # We need someone in Z who wants to go to A (county_a)
-                    wanted_county_z = pref_b.desired_county.name
-                    
-                    # Check if such a person (Teacher C) exists in our list
-                    third_person = None
-                    for k, teacher_c in enumerate(teacher_data):
-                        if k in [i, j]: continue
-                        county_c = get_county_name(teacher_c)
-                        pref_c = teacher_c['swap_pref']
+                    # Since B can want multiple Zs, we iterate through B's desired counties
+                    for wanted_county_z in teacher_b['desired_counties']:
+                        # Check if such a person (Teacher C) exists in our list
+                        third_person = None
+                        for k, teacher_c in enumerate(teacher_data):
+                            if k in [i, j]: continue
+                            county_c = get_county_name(teacher_c)
+                            
+                            if county_c == wanted_county_z and county_a in teacher_c['desired_counties']:
+                                third_person = teacher_c
+                                break
                         
-                        if county_c == wanted_county_z and pref_c and pref_c.desired_county and pref_c.desired_county.name == county_a:
-                            third_person = teacher_c
-                            break
-                    
-                    potential_triangles.append({
-                        'teacher_a': teacher_a,
-                        'teacher_b': teacher_b,
-                        'teacher_c': third_person, # None if incomplete
-                        'missing_from': wanted_county_z,
-                        'missing_to': county_a,
-                        'is_complete': third_person is not None,
-                        'combination': combination_name
-                    })
+                        potential_triangles.append({
+                            'teacher_a': teacher_a,
+                            'teacher_b': teacher_b,
+                            'teacher_c': third_person, # None if incomplete
+                            'missing_from': wanted_county_z,
+                            'missing_to': county_a,
+                            'is_complete': third_person is not None,
+                            'combination': combination_name
+                        })
 
     # Remove duplicate combinations (especially for complete triangles where A->B->C is same as B->C->A)
     unique_triangles = []
@@ -2205,8 +2214,9 @@ def admin_subject_combination_detail(request):
         if tri['teacher_c']:
             ids.append(tri['teacher_c']['user'].id)
         
-        # Sort IDs to create a unique key
-        key = tuple(sorted(ids))
+        # Sort IDs and include missing_from/to to create a unique key
+        # This ensures we don't skip different triangle paths for the same set of teachers
+        key = (tuple(sorted(ids)), tri['missing_from'], tri['missing_to'])
         if key not in seen_ids:
             seen_ids.add(key)
             unique_triangles.append(tri)
@@ -2223,19 +2233,18 @@ def admin_subject_combination_detail(request):
     for item in teacher_data:
         score = 0
         current = get_county_name(item)
-        desired = item['swap_pref'].desired_county.name if item['swap_pref'] and item['swap_pref'].desired_county else None
         
         match_found = False
         is_perfect = False
         
-        if search_from and search_to and current == search_from and desired == search_to:
+        if search_from and search_to and current == search_from and search_to in item['desired_counties']:
             score = 10
             is_perfect = True
             match_found = True
         elif search_from and current == search_from:
             score = 5
             match_found = True
-        elif search_to and desired == search_to:
+        elif search_to and search_to in item['desired_counties']:
             score = 3
             match_found = True
             

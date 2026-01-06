@@ -116,8 +116,8 @@
                             <!-- Teacher A -->
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-400">Teacher A</span>
-                                <span class="font-medium text-white">{{
-                                    tri.teacher_a.profile.get_full_name|default:tri.teacher_a.user.email }}</span>
+                                <span class="font-medium text-white">
+                                  {{  tri.teacher_a.profile.get_full_name|default:tri.teacher_a.user.email }}</span>
                                 <span class="text-xs text-indigo-400">
                                     {{ tri.teacher_a.school.ward.constituency.county.name }} →
                                     {{ tri.teacher_a.swap_pref.desired_county.name }}</span>
@@ -149,16 +149,16 @@
                             {% if tri.is_complete %}
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-400">Teacher C</span>
-                                <span class="font-medium text-white">{{
-                                    tri.teacher_c.profile.get_full_name|default:tri.teacher_c.user.email }}</span>
-                                <span class="text-xs text-indigo-400">{{
-                                    tri.teacher_c.school.ward.constituency.county.name }} → {{
-                                    tri.teacher_c.swap_pref.desired_county.name }}</span>
+                                <span class="font-medium text-white">
+                                   {{ tri.teacher_c.profile.get_full_name|default:tri.teacher_c.user.email }}</span>
+                                <span class="text-xs text-indigo-400">
+                                 {{   tri.teacher_c.school.ward.constituency.county.name }} → 
+                                {{    tri.teacher_c.swap_pref.desired_county.name }}</span>
                             </div>
                             {% else %}
                             <div class="flex flex-col px-3 py-1 bg-yellow-900/20 border border-yellow-700/50 rounded">
-                                <span class="text-xs text-yellow-500 font-bold uppercase tracking-tighter">Missing {{
-                                    tri.combination }} Link</span>
+                                <span class="text-xs text-yellow-500 font-bold uppercase tracking-tighter">Missing {{ 
+                                    
 
                                 <span class="text-xs text-gray-300 italic">Need: <strong>{{ tri.missing_from }}</strong>
                                     →

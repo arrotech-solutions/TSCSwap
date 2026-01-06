@@ -2276,3 +2276,183 @@ def admin_subject_combination_detail(request):
     }
     
     return render(request, 'users/admin_subject_combination_detail.html', context)
+@login_required
+@staff_required(login_url='users:login')
+def admin_unique_locations(request):
+    """
+    View for admin to see unique locations (Counties) among primary level teachers.
+    Groups primary teachers by their current county.
+    """
+    User = get_user_model()
+    
+    # Get the primary school level object
+    try:
+        primary_level = Level.objects.get(name__iexact='Primary School')
+    except Level.DoesNotExist:
+        messages.error(request, "Primary School level not found in the system. Please add it first.")
+        return redirect('users:admin_users')
+
+    # Fetch primary teachers and their school locations
+    teachers = User.objects.filter(
+        role='Teacher',
+        profile__level=primary_level
+    ).select_related(
+        'profile', 
+        'profile__school', 
+        'profile__school__ward__constituency__county'
+    )
+    
+    locations = {}
+    
+    for teacher in teachers:
+        profile = getattr(teacher, 'profile', None)
+        county = None
+        if profile and profile.school and profile.school.ward:
+            county = profile.school.ward.constituency.county
+            
+        if not county:
+            continue
+            
+        county_name = county.name
+        county_id = county.id
+        
+        # Get teacher display name
+        if profile and profile.get_full_name():
+            name = profile.get_full_name()
+        elif profile and profile.first_name:
+            name = f"{profile.first_name} {profile.last_name or ''}".strip()
+        else:
+            name = teacher.email
+            
+        if county_name not in locations:
+            locations[county_name] = {
+                'county_id': county_id,
+                'teachers': [],
+                'count': 0
+            }
+            
+        locations[county_name]['teachers'].append({
+            'name': name,
+            'email': teacher.email,
+            'id': teacher.id
+        })
+        locations[county_name]['count'] += 1
+    
+    # Sort locations by count descending, then by name
+    sorted_locations = sorted(
+        locations.items(), 
+        key=lambda x: (-x[1]['count'], x[0])
+    )
+    
+    context = {
+        'locations': sorted_locations,
+        'total_primary_teachers': sum(l['count'] for l in locations.values()),
+        'total_unique_counties': len(locations),
+        'page_title': 'Unique Primary Teacher Locations',
+        'active_tab': 'unique_locations'
+    }
+    
+    return render(request, 'users/admin_unique_locations.html', context)
+
+@login_required
+@staff_required(login_url='users:login')
+def admin_location_detail(request):
+    """
+    Detailed view for a specific location (County).
+    Expects county name as a query parameter 'county'.
+    """
+    county_name = request.GET.get('county', '')
+    
+    if not county_name:
+        messages.error(request, "No county specified.")
+        return redirect('users:admin_unique_locations')
+        
+    # Get the primary school level object
+    try:
+        primary_level = Level.objects.get(name__iexact='Primary School')
+    except Level.DoesNotExist:
+        messages.error(request, "Primary School level not found in the system.")
+        return redirect('users:admin_unique_locations')
+
+    # Find primary teachers in this county
+    teachers = MyUser.objects.filter(
+        role='Teacher',
+        profile__level=primary_level,
+        profile__school__ward__constituency__county__name=county_name
+    ).select_related(
+        'profile', 
+        'profile__school', 
+        'profile__school__ward__constituency__county',
+        'swappreference',
+        'swappreference__desired_county'
+    ).prefetch_related(
+        'swappreference__open_to_all'
+    ).distinct()
+    
+    teacher_data = []
+    for teacher in teachers:
+        profile = getattr(teacher, 'profile', None)
+        phone = profile.phone if profile else None
+        
+        # Prepare WhatsApp URL
+        whatsapp_url = None
+        if phone:
+            from chat.whatsapp_integration import normalize_phone_number
+            normalized_phone = normalize_phone_number(phone)
+            whatsapp_url = f'https://wa.me/{normalized_phone}'
+        
+        # Extract ALL desired counties
+        pref = getattr(teacher, 'swappreference', None)
+        desired_counties = []
+        if pref:
+            if pref.desired_county:
+                desired_counties.append(pref.desired_county.name)
+            for oc in pref.open_to_all.all():
+                if oc.name not in desired_counties:
+                    desired_counties.append(oc.name)
+            
+        teacher_data.append({
+            'user': teacher,
+            'profile': profile,
+            'phone': phone,
+            'whatsapp_url': whatsapp_url,
+            'school': profile.school if profile else None,
+            'swap_pref': pref,
+            'desired_counties': desired_counties,
+        })
+    
+    # Calculate destination analytics
+    destination_counts = {}
+    for item in teacher_data:
+        for d_county in item['desired_counties']:
+            destination_counts[d_county] = destination_counts.get(d_county, 0) + 1
+            
+    sorted_analytics = sorted(
+        [{'name': name, 'count': count} for name, count in destination_counts.items()],
+        key=lambda x: x['count'],
+        reverse=True
+    )
+    
+    # Simplified search logic matching the county detail
+    search_to = request.GET.get('to_county', '')
+    from home.models import Counties
+    all_counties = Counties.objects.all().order_by('name')
+
+    if search_to:
+        filtered_data = []
+        for item in teacher_data:
+            if search_to in item['desired_counties']:
+                filtered_data.append(item)
+        teacher_data = filtered_data
+
+    context = {
+        'county_name': county_name,
+        'teachers': teacher_data,
+        'location_analytics': sorted_analytics,
+        'counties': all_counties,
+        'search_to': search_to,
+        'page_title': f'Primary Teachers in {county_name}',
+        'active_tab': 'unique_locations'
+    }
+    
+    return render(request, 'users/admin_location_detail.html', context)

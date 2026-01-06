@@ -153,6 +153,17 @@
                                 </svg>
                                 Unique Subject Combinations
                             </a>
+                            <a href="{% url 'users:admin_unique_locations' %}"
+                                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                </svg>
+                                Unique Primary Teacher Locations
+                            </a>
                             <a href="{% url 'payments:admin_payments' %}"
                                 class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                 <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor"
@@ -458,6 +469,16 @@
                                 d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
                         </svg>
                         <span>Unique Subject Combinations</span>
+                    </a>
+                    <a href="{% url 'users:admin_unique_locations' %}"
+                        class="flex items-center px-3 py-2 text-gray-300 hover:text-teal-400 hover:bg-gray-700 rounded-md font-medium transition duration-300 pl-8">
+                        <svg class="w-4 h-4 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span>Unique Primary Teacher Locations</span>
                     </a>
                     <a href="{% url 'payments:admin_payments' %}"
                         class="flex items-center px-3 py-2 text-gray-300 hover:text-teal-400 hover:bg-gray-700 rounded-md font-medium transition duration-300 pl-8">

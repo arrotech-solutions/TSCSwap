@@ -36,8 +36,9 @@
                         class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         <option value="">Any County</option>
                         {% for county in counties %}
-                        <option value="{{ county.name }}" {% if search_from == county.name %}selected{% endif %}>{{ county.name }}</option>
-                            
+                        <option value="{{ county.name }}" {% if search_from==county.name %}selected{% endif %}>{{
+                            county.name }}</option>
+
                         {% endfor %}
                     </select>
                 </div>
@@ -48,8 +49,9 @@
                         class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         <option value="">Any County</option>
                         {% for county in counties %}
-                        <option value="{{ county.name }}" {% if search_to == county.name %}selected{% endif %}>{{ county.name }}</option>
-                            
+                        <option value="{{ county.name }}" {% if search_to==county.name %}selected{% endif %}>{{
+                            county.name }}</option>
+
                         {% endfor %}
                     </select>
                 </div>
@@ -116,10 +118,11 @@
                             <!-- Teacher A -->
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-400">Teacher A</span>
-                                <span class="font-medium text-white">{{ tri.teacher_a.profile.get_full_name|default:tri.teacher_a.user.email }}</span>
+                                <span class="font-medium text-white">{{
+                                    tri.teacher_a.profile.get_full_name|default:tri.teacher_a.user.email }}</span>
                                 <span class="text-xs text-indigo-400">
-                                 {{   tri.teacher_a.school.ward.constituency.county.name }} → 
-                                   {{ tri.teacher_a.swap_pref.desired_county.name }}</span>
+                                    {{ tri.teacher_a.school.ward.constituency.county.name }} →
+                                    {{ tri.teacher_a.swap_pref.desired_county.name }}</span>
                             </div>
 
                             <svg class="w-4 h-4 text-gray-500 mx-2" fill="none" stroke="currentColor"
@@ -132,10 +135,10 @@
                             <div class="flex flex-col">
                                 <span class="text-xs text-gray-400">Teacher B</span>
                                 <span class="font-medium text-white">
-                                 {{   tri.teacher_b.profile.get_full_name|default:tri.teacher_b.user.email }}</span>
+                                    {{ tri.teacher_b.profile.get_full_name|default:tri.teacher_b.user.email }}</span>
                                 <span class="text-xs text-indigo-400">
-                                    {{ tri.teacher_b.school.ward.constituency.county.name }} → 
-                                  {{  tri.teacher_b.swap_pref.desired_county.name }}</span>
+                                    {{ tri.teacher_b.school.ward.constituency.county.name }} →
+                                    {{ tri.teacher_b.swap_pref.desired_county.name }}</span>
                             </div>
 
                             <svg class="w-4 h-4 text-gray-500 mx-2" fill="none" stroke="currentColor"
@@ -156,8 +159,9 @@
                             </div>
                             {% else %}
                             <div class="flex flex-col px-3 py-1 bg-yellow-900/20 border border-yellow-700/50 rounded">
-                                <span class="text-xs text-yellow-500 font-bold uppercase tracking-tighter">Missing {{ tri.combination }} Link</span>
-                                    
+                                <span class="text-xs text-yellow-500 font-bold uppercase tracking-tighter">Missing {{
+                                    tri.combination }} Link</span>
+
                                 <span class="text-xs text-gray-300 italic">Need: <strong>{{ tri.missing_from }}</strong>
                                     →
                                     <strong>{{ tri.missing_to }}</strong></span>
@@ -250,7 +254,7 @@
                         </td>
                         <td class="px-6 py-4">
                             {% if item.swap_pref %}
-                            <div class="text-sm text-green-400">Wants: {{ item.swap_pref.desired_county.name }}</div>
+                            <div class="text-sm text-green-400">Wants: {{ item.desired_counties|join:", " }}</div>
                             <div class="text-xs text-gray-500">
                                 {% if item.swap_pref.is_hardship == 'Yes' %}
                                 Hardship only

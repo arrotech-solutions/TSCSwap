@@ -144,6 +144,15 @@
                                 </svg>
                                 Manage Teacher Subjects
                             </a>
+                            <a href="{% url 'users:admin_unique_subject_combinations' %}"
+                                class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                                <svg class="w-4 h-4 mr-3 text-pink-500" fill="none" stroke="currentColor"
+                                    viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                                </svg>
+                                Unique Subject Combinations
+                            </a>
                             <a href="{% url 'payments:admin_payments' %}"
                                 class="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                 <svg class="w-4 h-4 mr-3 text-green-500" fill="none" stroke="currentColor"
@@ -315,7 +324,8 @@
                             x-transition:leave-end="transform opacity-0 scale-95"
                             class="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-50">
                             <div class="px-4 py-2 border-b border-gray-100">
-                                <p class="text-sm font-medium text-gray-900">{{ user.get_full_name|default:user.username }}</p>
+                                <p class="text-sm font-medium text-gray-900">{{ user.get_full_name|default:user.username
+                                    }}</p>
                                 <p class="text-xs text-gray-500">{{ user.email }}</p>
                             </div>
 
@@ -441,6 +451,14 @@
                         </svg>
                         <span>Manage Teacher Subjects</span>
                     </a>
+                    <a href="{% url 'users:admin_unique_subject_combinations' %}"
+                        class="flex items-center px-3 py-2 text-gray-300 hover:text-teal-400 hover:bg-gray-700 rounded-md font-medium transition duration-300 pl-8">
+                        <svg class="w-4 h-4 mr-2 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                        </svg>
+                        <span>Unique Subject Combinations</span>
+                    </a>
                     <a href="{% url 'payments:admin_payments' %}"
                         class="flex items-center px-3 py-2 text-gray-300 hover:text-teal-400 hover:bg-gray-700 rounded-md font-medium transition duration-300 pl-8">
                         <svg class="w-4 h-4 mr-2 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -560,7 +578,8 @@
                                 {% endif %}
                             </div>
                             <div>
-                                <p class="text-sm font-medium text-gray-300">{{ user.get_full_name|default:user.username }}</p>
+                                <p class="text-sm font-medium text-gray-300">{{ user.get_full_name|default:user.username
+                                    }}</p>
                                 <p class="text-xs text-gray-500">{{ user.email }}</p>
                             </div>
                         </div>
@@ -720,7 +739,7 @@
                 // 1. Webview Detection & Chat Button Hiding
                 const isWebview = () => {
                     const ua = window.navigator.userAgent;
-                    const isAndroidWebview = /wv/.test(ua) || ( /Version\/.*Chrome/.test(ua) && !/Edge/.test(ua) );
+                    const isAndroidWebview = /wv/.test(ua) || (/Version\/.*Chrome/.test(ua) && !/Edge/.test(ua));
                     const isIosWebview = /AppleWebKit/.test(ua) && !/Safari/.test(ua) && !/CriOS/.test(ua) && !/FxiOS/.test(ua);
                     return isAndroidWebview || isIosWebview;
                 };

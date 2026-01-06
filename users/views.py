@@ -1975,3 +1975,295 @@ def swap_requests(request):
     }
     
     return render(request, 'users/swap_requests.html', context)
+
+@login_required
+@staff_required(login_url='users:login')
+def admin_unique_subject_combinations(request):
+    """
+    View for admin to see unique subject combinations among teachers.
+    Groups teachers by their specific subject combinations based on their entire portfolio.
+    """
+    User = get_user_model()
+    # Fetch teachers and their subjects in one go
+    teachers = User.objects.filter(role='Teacher').prefetch_related(
+        'mysubject_set__subject'
+    ).select_related('profile', 'profile__level')
+    
+    combinations = {}
+    
+    for teacher in teachers:
+        # Collect ALL subjects across ALL MySubject records for this teacher
+        all_subjects = []
+        for ms in teacher.mysubject_set.all():
+            all_subjects.extend(list(ms.subject.all()))
+            
+        if not all_subjects:
+            continue
+            
+        # Get unique subjects (in case of overlap across records) and sort them
+        # Convert to set of IDs first to avoid duplicates, then get objects
+        unique_subject_ids = set(s.id for s in all_subjects)
+        final_subjects = Subject.objects.filter(id__in=unique_subject_ids).order_by('name')
+        
+        subject_names = [s.name for s in final_subjects]
+        subject_ids = [str(s.id) for s in final_subjects]
+        combination_key = " / ".join(subject_names)
+        combination_ids = ",".join(subject_ids)
+        
+        # Get teacher display name
+        profile = getattr(teacher, 'profile', None)
+        if profile and profile.get_full_name():
+            name = profile.get_full_name()
+        elif profile and profile.first_name:
+            name = f"{profile.first_name} {profile.last_name or ''}".strip()
+        else:
+            name = teacher.email
+            
+        level = profile.level.name if profile and profile.level else "N/A"
+        
+        if combination_key not in combinations:
+            combinations[combination_key] = {
+                'subjects': subject_names,
+                'subject_ids': combination_ids,
+                'teachers': [],
+                'count': 0
+            }
+            
+        combinations[combination_key]['teachers'].append({
+            'name': name,
+            'email': teacher.email,
+            'level': level,
+            'id': teacher.id
+        })
+        combinations[combination_key]['count'] += 1
+    
+    # Sort combinations by count descending, then by name
+    sorted_combinations = sorted(
+        combinations.items(), 
+        key=lambda x: (-x[1]['count'], x[0])
+    )
+    
+    context = {
+        'combinations': sorted_combinations,
+        'total_teachers_with_subjects': sum(c['count'] for c in combinations.values()),
+        'total_unique_combinations': len(combinations),
+        'page_title': 'Unique Subject Combinations',
+        'active_tab': 'subject_combinations'
+    }
+    
+    return render(request, 'users/admin_unique_subject_combinations.html', context)
+
+@login_required
+@staff_required(login_url='users:login')
+def admin_subject_combination_detail(request):
+    """
+    Detailed view for a specific subject combination.
+    Expects combination name as a query parameter 'combination'.
+    Example: ?combination=English / Mathematics
+    """
+    combination_key = request.GET.get('combination', '')
+    
+    # Fallback to IDs if combination is not provided
+    if not combination_key:
+        subject_ids_str = request.GET.get('ids', '')
+        if not subject_ids_str:
+            messages.error(request, "No combination specified.")
+            return redirect('users:admin_unique_subject_combinations')
+        
+        try:
+            subject_ids = [int(sid) for sid in subject_ids_str.split(',')]
+        except ValueError:
+            messages.error(request, "Invalid parameters.")
+            return redirect('users:admin_unique_subject_combinations')
+        
+        # Get names from IDs to determine the combination key
+        subjects = Subject.objects.filter(id__in=subject_ids).order_by('name')
+        subject_names = [s.name for s in subjects]
+    else:
+        subject_names = combination_key.split(' / ')
+
+    combination_name = " / ".join(subject_names)
+    
+    # Strict Portfolio Matching: Find teachers whose TOTAL subject count is exactly len(subject_names)
+    # and who have all the specified subjects in their portfolio.
+    from django.db.models import Count
+    
+    teachers = MyUser.objects.filter(role='Teacher').annotate(
+        total_subjects=Count('mysubject__subject', distinct=True)
+    ).filter(
+        total_subjects=len(subject_names)
+    )
+    
+    # Ensure every subject in the combination is present in their portfolio
+    for name in subject_names:
+        teachers = teachers.filter(mysubject__subject__name=name)
+    
+    teachers = teachers.select_related(
+        'profile', 
+        'profile__school', 
+        'profile__school__ward__constituency__county',
+        'profile__level',
+        'swappreference',
+        'swappreference__desired_county'
+    ).prefetch_related('mysubject_set__subject').distinct()
+    
+    teacher_data = []
+    for teacher in teachers:
+        # Get WhatsApp info if available
+        profile = getattr(teacher, 'profile', None)
+        phone = profile.phone if profile else None
+        
+        # Prepare WhatsApp URL
+        whatsapp_url = None
+        if phone:
+            from chat.whatsapp_integration import normalize_phone_number
+            normalized_phone = normalize_phone_number(phone)
+            whatsapp_url = f'https://wa.me/{normalized_phone}'
+            
+        teacher_data.append({
+            'user': teacher,
+            'profile': profile,
+            'phone': phone,
+            'whatsapp_url': whatsapp_url,
+            'school': profile.school if profile else None,
+            'swap_pref': getattr(teacher, 'swappreference', None),
+        })
+    
+    # Calculate location analytics
+    location_counts = {}
+    for item in teacher_data:
+        pref = item['swap_pref']
+        if pref and pref.desired_county:
+            county_name = pref.desired_county.name
+            location_counts[county_name] = location_counts.get(county_name, 0) + 1
+            
+    # Sort analytics by count descending
+    sorted_analytics = sorted(
+        [{'name': name, 'count': count} for name, count in location_counts.items()],
+        key=lambda x: x['count'],
+        reverse=True
+    )
+
+    # Detect Triangle Swaps (Complete or Potential Chains of 2)
+    potential_triangles = []
+    
+    # Helper to get current county name
+    def get_county_name(t_item):
+        if t_item['school'] and t_item['school'].ward:
+            return t_item['school'].ward.constituency.county.name
+        return None
+
+    # Compare every teacher with every other teacher
+    for i, teacher_a in enumerate(teacher_data):
+        county_a = get_county_name(teacher_a)
+        pref_a = teacher_a['swap_pref']
+        if not county_a or not pref_a or not pref_a.desired_county:
+            continue
+
+        for j, teacher_b in enumerate(teacher_data):
+            if i == j: continue
+            
+            county_b = get_county_name(teacher_b)
+            pref_b = teacher_b['swap_pref']
+            if not county_b or not pref_b or not pref_b.desired_county:
+                continue
+
+            # Case: Teacher A wants to go to Teacher B's location
+            if pref_a.desired_county.name == county_b:
+                # To be a triangle (instead of mutual), B must NOT want to go to A
+                if pref_b.desired_county.name != county_a:
+                    # We have a chain: A -> B -> Z
+                    # We need someone in Z who wants to go to A (county_a)
+                    wanted_county_z = pref_b.desired_county.name
+                    
+                    # Check if such a person (Teacher C) exists in our list
+                    third_person = None
+                    for k, teacher_c in enumerate(teacher_data):
+                        if k in [i, j]: continue
+                        county_c = get_county_name(teacher_c)
+                        pref_c = teacher_c['swap_pref']
+                        
+                        if county_c == wanted_county_z and pref_c and pref_c.desired_county and pref_c.desired_county.name == county_a:
+                            third_person = teacher_c
+                            break
+                    
+                    potential_triangles.append({
+                        'teacher_a': teacher_a,
+                        'teacher_b': teacher_b,
+                        'teacher_c': third_person, # None if incomplete
+                        'missing_from': wanted_county_z,
+                        'missing_to': county_a,
+                        'is_complete': third_person is not None,
+                        'combination': combination_name
+                    })
+
+    # Remove duplicate combinations (especially for complete triangles where A->B->C is same as B->C->A)
+    unique_triangles = []
+    seen_ids = set()
+    for tri in potential_triangles:
+        ids = [tri['teacher_a']['user'].id, tri['teacher_b']['user'].id]
+        if tri['teacher_c']:
+            ids.append(tri['teacher_c']['user'].id)
+        
+        # Sort IDs to create a unique key
+        key = tuple(sorted(ids))
+        if key not in seen_ids:
+            seen_ids.add(key)
+            unique_triangles.append(tri)
+    
+    # Weighted Search Logic
+    search_from = request.GET.get('from_county', '')
+    search_to = request.GET.get('to_county', '')
+    
+    # Import Counties and list them for the search form
+    from home.models import Counties
+    all_counties = Counties.objects.all().order_by('name')
+
+    filtered_teacher_data = []
+    for item in teacher_data:
+        score = 0
+        current = get_county_name(item)
+        desired = item['swap_pref'].desired_county.name if item['swap_pref'] and item['swap_pref'].desired_county else None
+        
+        match_found = False
+        is_perfect = False
+        
+        if search_from and search_to and current == search_from and desired == search_to:
+            score = 10
+            is_perfect = True
+            match_found = True
+        elif search_from and current == search_from:
+            score = 5
+            match_found = True
+        elif search_to and desired == search_to:
+            score = 3
+            match_found = True
+            
+        # If search is ACTIVE, only include matches (Strict Filtering)
+        if search_from or search_to:
+            if match_found:
+                item['search_score'] = score
+                item['is_perfect_match'] = is_perfect
+                filtered_teacher_data.append(item)
+        else:
+            item['search_score'] = 0
+            item['is_perfect_match'] = False
+            filtered_teacher_data.append(item)
+
+    teacher_data = filtered_teacher_data
+    # Sort teacher_data by score descending, then by name
+    teacher_data.sort(key=lambda x: (-x.get('search_score', 0), (x['profile'].get_full_name() if x['profile'] else x['user'].email)))
+    
+    context = {
+        'combination_name': combination_name,
+        'teachers': teacher_data,
+        'location_analytics': sorted_analytics,
+        'potential_triangles': unique_triangles,
+        'counties': all_counties,
+        'search_from': search_from,
+        'search_to': search_to,
+        'page_title': f'Teachers for {combination_name}',
+        'active_tab': 'subject_combinations'
+    }
+    
+    return render(request, 'users/admin_subject_combination_detail.html', context)

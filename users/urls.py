@@ -20,6 +20,8 @@ urlpatterns = [
     path('admin/users/', views.admin_users_view, name='admin_users'),
     path('admin/users/<int:user_id>/edit/', views.admin_edit_user_view, name='admin_edit_user'),
     path('admin/users/<int:user_id>/delete/', views.admin_delete_user_view, name='admin_delete_user'),
+    path('admin/unique-subject-combinations/', views.admin_unique_subject_combinations, name='admin_unique_subject_combinations'),
+    path('admin/unique-subject-combinations/detail/', views.admin_subject_combination_detail, name='admin_subject_combination_detail'),
     
     # Password reset URLs moved to root urls.py for global access
 

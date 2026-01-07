@@ -24,6 +24,8 @@ urlpatterns = [
     path('admin/unique-subject-combinations/detail/', views.admin_subject_combination_detail, name='admin_subject_combination_detail'),
     path('admin/unique-locations/', views.admin_unique_locations, name='admin_unique_locations'),
     path('admin/unique-locations/detail/', views.admin_location_detail, name='admin_location_detail'),
+    path('admin/unique-fast-swap-combinations/', views.admin_unique_fast_swap_combinations, name='admin_unique_fast_swap_combinations'),
+    path('admin/unique-fast-swap-combinations/detail/', views.admin_fast_swap_combination_detail, name='admin_fast_swap_combination_detail'),
     
     # Password reset URLs moved to root urls.py for global access
 

@@ -1,0 +1,258 @@
+{% extends 'users/base.html' %}
+
+{% block title %}Admin - FastSwap Combination: {{ combination_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="bg-gray-800 rounded-lg shadow-xl overflow-hidden border border-gray-700">
+        <!-- Header Section -->
+        <div class="bg-gray-900 px-6 py-6 border-b border-gray-700">
+            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl font-bold text-white flex items-center">
+                        <svg class="w-8 h-8 mr-3 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        </svg>
+                        FastSwap Combination: <span class="text-blue-400 ml-2">{{ combination_name }}</span>
+                    </h1>
+                    <p class="text-gray-400 mt-1">Analyzing {{ fast_swaps|length }} FastSwap entries with this portfolio
+                    </p>
+                </div>
+                <div class="flex items-center space-x-3">
+                    <a href="{% url 'users:admin_unique_fast_swap_combinations' %}"
+                        class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium rounded-lg transition-colors duration-200 flex items-center">
+                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        Back to List
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6">
+            <!-- Location Analytics -->
+            {% if location_analytics %}
+            <div class="mb-12">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-pink-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Destination Preferences
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {% for item in location_analytics %}
+                    <div class="bg-gray-700/30 border border-gray-600 rounded-lg p-4 flex justify-between items-center">
+                        <div>
+                            <span class="text-gray-300 font-medium">{{ item.name }}</span>
+                            <div class="w-24 bg-gray-600 rounded-full h-1.5 mt-2">
+                                <div class="bg-blue-500 h-1.5 rounded-full"
+                                    style="width: {% widthratio item.count fast_swaps|length 100 %}%"></div>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xl font-bold text-white">{{ item.count }}</span>
+                            <span class="text-[10px] text-gray-500 block uppercase">Entries</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Triangle Swap Analysis -->
+            {% if potential_triangles %}
+            <div class="mb-12">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path
+                            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Triangle Swap Analysis
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {% for tri in potential_triangles %}
+                    <div
+                        class="bg-gray-700/20 border {% if tri.is_complete %}border-indigo-500/30{% else %}border-yellow-600/30 shadow-inner{% endif %} rounded-xl p-5 relative overflow-hidden">
+                        <div class="flex items-center justify-between mb-4">
+                            <!-- FastSwap A -->
+                            <div class="flex-1 text-center">
+                                <span class="text-[10px] text-gray-500 uppercase block">A: FastSwap</span>
+                                <span class="font-bold text-white">{{ tri.fast_swap_a.names|truncatechars:12 }}</span>
+                                <span class="text-[10px] text-indigo-300 block">{{ tri.fast_swap_a.current_county.name
+                                    }}</span>
+                            </div>
+
+                            <svg class="w-4 h-4 text-gray-600 mx-2" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+
+                            <!-- Entity B -->
+                            <div class="flex-1 text-center">
+                                <span class="text-[10px] text-gray-500 uppercase block">B: {{ tri.entity_b.type
+                                    }}</span>
+                                <span class="font-bold text-white">
+                                    {% if tri.entity_b.type == 'user' %}
+                                    {{ tri.entity_b.obj.get_full_name|default:tri.entity_b.obj.email|truncatechars:12 }}
+                                    {% else %}
+                                    {{ tri.entity_b.obj.names|truncatechars:12 }}
+                                    {% endif %}
+                                </span>
+                                <span class="text-[10px] text-indigo-300 block">
+                                    {% if tri.entity_b.type == 'user' %}
+                                    {{ tri.entity_b.obj.profile.school.ward.constituency.county.name }}
+                                    {% else %}
+                                    {{ tri.entity_b.obj.current_county.name }}
+                                    {% endif %}
+                                </span>
+                            </div>
+
+                            <svg class="w-4 h-4 text-gray-600 mx-2" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+
+                            <!-- Entity C or Missing -->
+                            <div class="flex-1 text-center">
+                                {% if tri.is_complete %}
+                                <span class="text-[10px] text-gray-500 uppercase block">C: {{ tri.entity_c.type
+                                    }}</span>
+                                <span class="font-bold text-white">
+                                    {% if tri.entity_c.type == 'user' %}
+                                    {{ tri.entity_c.obj.get_full_name|default:tri.entity_c.obj.email|truncatechars:12 }}
+                                    {% else %}
+                                    {{ tri.entity_c.obj.names|truncatechars:12 }}
+                                    {% endif %}
+                                </span>
+                                <span class="text-[10px] text-indigo-300 block">
+                                    {% if tri.entity_c.type == 'user' %}
+                                    {{ tri.entity_c.obj.profile.school.ward.constituency.county.name }}
+                                    {% else %}
+                                    {{ tri.entity_c.obj.current_county.name }}
+                                    {% endif %}
+                                </span>
+                                {% else %}
+                                <span
+                                    class="text-[10px] text-red-500 font-black uppercase block tracking-tighter">Missing
+                                    Link</span>
+                                <div class="text-[9px] text-gray-500 leading-none mt-1">
+                                    Need: <span class="text-white font-bold">{{ tri.missing_from.name }}</span><br>
+                                    To: <span class="text-white font-bold">{{ tri.missing_to.name }}</span>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between border-t border-gray-700/50 pt-3">
+                            <div class="flex space-x-2">
+                                <a href="{% url 'home:fast_swap_detail' tri.fast_swap_a.id %}"
+                                    class="text-[10px] bg-gray-700 px-2 py-1 rounded text-gray-300 hover:text-white">View
+                                    A</a>
+
+                                {% if tri.entity_b.type == 'user' %}
+                                <a href="{% url 'users:admin_edit_user' tri.entity_b.obj.id %}"
+                                    class="text-[10px] bg-gray-700 px-2 py-1 rounded text-gray-300 hover:text-white">View
+                                    B</a>
+                                {% else %}
+                                <a href="{% url 'home:fast_swap_detail' tri.entity_b.obj.id %}"
+                                    class="text-[10px] bg-gray-700 px-2 py-1 rounded text-gray-300 hover:text-white">View
+                                    B</a>
+                                {% endif %}
+
+                                {% if tri.entity_c %}
+                                {% if tri.entity_c.type == 'user' %}
+                                <a href="{% url 'users:admin_edit_user' tri.entity_c.obj.id %}"
+                                    class="text-[10px] bg-gray-700 px-2 py-1 rounded text-gray-300 hover:text-white">View
+                                    C</a>
+                                {% else %}
+                                <a href="{% url 'home:fast_swap_detail' tri.entity_c.obj.id %}"
+                                    class="text-[10px] bg-gray-700 px-2 py-1 rounded text-gray-300 hover:text-white">View
+                                    C</a>
+                                {% endif %}
+                                {% endif %}
+                            </div>
+
+                            {% if tri.is_complete %}
+                            <span
+                                class="px-2 py-1 bg-green-500/20 text-green-400 text-[10px] rounded uppercase font-bold border border-green-500/30">Complete</span>
+                            {% else %}
+                            <span
+                                class="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-[10px] rounded uppercase font-bold border border-yellow-500/30">Potential</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Entries Table -->
+            <div class="overflow-x-auto shadow-2xl rounded-xl border border-gray-700">
+                <table class="min-w-full divide-y divide-gray-700">
+                    <thead class="bg-gray-900">
+                        <tr>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                Entry</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                Phone</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                School</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                Current County</th>
+                            <th class="px-6 py-4 text-left text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                Preferred</th>
+                            <th class="px-6 py-4 text-center text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-gray-800/80 divide-y divide-gray-700">
+                        {% for item in fast_swaps %}
+                        <tr class="hover:bg-gray-700 transition-colors">
+                            <td class="px-6 py-4">
+                                <div class="text-sm font-medium text-white">{{ item.obj.names }}</div>
+                                <div class="text-[10px] text-gray-500">FastSwap #{{ item.obj.id }}</div>
+                            </td>
+                            <td class="px-6 py-4 text-sm text-gray-300 font-mono">{{ item.obj.phone }}</td>
+                            <td class="px-6 py-4">
+                                <div class="text-xs text-gray-300">{{ item.obj.school.name|default:"Not specified" }}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <span
+                                    class="px-2 py-1 bg-indigo-500/10 text-indigo-400 text-xs rounded border border-indigo-500/30 font-medium">
+                                    {{ item.current_county_name }}
+                                </span>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex flex-wrap gap-1">
+                                    {% for county in item.desired_counties %}
+                                    <span
+                                        class="px-1.5 py-0.5 bg-pink-500/10 text-pink-400 text-[10px] rounded border border-pink-500/20">
+                                        {{ county }}
+                                    </span>
+                                    {% endfor %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <a href="{% url 'home:fast_swap_detail' item.obj.id %}"
+                                    class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded transition-all">
+                                    View Detail
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

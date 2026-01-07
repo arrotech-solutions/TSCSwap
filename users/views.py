@@ -24,7 +24,8 @@ from django.http import HttpResponseForbidden
 
 from home.models import (
     Level, Subject, MySubject, Schools, SwapPreference, 
-    Counties, Constituencies, Wards, Swaps, SwapRequests
+    Counties, Constituencies, Wards, Swaps, SwapRequests,
+    FastSwap, Bookmark
 )
 from .models import MyUser, PersonalProfile
 
@@ -2276,6 +2277,184 @@ def admin_subject_combination_detail(request):
     }
     
     return render(request, 'users/admin_subject_combination_detail.html', context)
+
+
+@login_required
+@staff_required(login_url='users:login')
+def admin_unique_fast_swap_combinations(request):
+    """
+    View for admin to see unique subject combinations among FastSwap entries.
+    Groups FastSwaps by their specific subject combinations.
+    """
+    fast_swaps = FastSwap.objects.all().prefetch_related(
+        'subjects'
+    ).select_related('level', 'current_county', 'most_preferred')
+    
+    combinations = {}
+    
+    for fs in fast_swaps:
+        # Get unique subjects and sort them
+        final_subjects = fs.subjects.all().order_by('name')
+        
+        if not final_subjects.exists():
+            continue
+            
+        subject_names = [s.name for s in final_subjects]
+        subject_ids = [str(s.id) for s in final_subjects]
+        combination_key = " / ".join(subject_names)
+        combination_ids = ",".join(subject_ids)
+        
+        if combination_key not in combinations:
+            combinations[combination_key] = {
+                'subjects': subject_names,
+                'subject_ids': combination_ids,
+                'fast_swaps': [],
+                'count': 0
+            }
+            
+        combinations[combination_key]['fast_swaps'].append({
+            'names': fs.names,
+            'phone': fs.phone,
+            'level': fs.level.name,
+            'current_county': fs.current_county.name if fs.current_county else "N/A",
+            'id': fs.id
+        })
+        combinations[combination_key]['count'] += 1
+    
+    # Sort combinations by count descending, then by name
+    sorted_combinations = sorted(
+        combinations.items(), 
+        key=lambda x: (-x[1]['count'], x[0])
+    )
+    
+    context = {
+        'combinations': sorted_combinations,
+        'total_fast_swaps_with_subjects': sum(c['count'] for c in combinations.values()),
+        'total_unique_combinations': len(combinations),
+        'page_title': 'Unique FastSwap Combinations',
+        'active_tab': 'fast_swap_combinations'
+    }
+    
+    return render(request, 'users/admin_unique_fast_swap_combinations.html', context)
+
+
+@login_required
+@staff_required(login_url='users:login')
+def admin_fast_swap_combination_detail(request):
+    """
+    Detailed view for a specific FastSwap subject combination.
+    """
+    from home.fast_swap_utils import find_triangle_matches_for_fast_swap
+    
+    combination_key = request.GET.get('combination', '')
+    
+    if not combination_key:
+        subject_ids_str = request.GET.get('ids', '')
+        if not subject_ids_str:
+            messages.error(request, "No combination specified.")
+            return redirect('users:admin_unique_fast_swap_combinations')
+        
+        try:
+            subject_ids = [int(sid) for sid in subject_ids_str.split(',')]
+        except ValueError:
+            messages.error(request, "Invalid parameters.")
+            return redirect('users:admin_unique_fast_swap_combinations')
+        
+        subjects = Subject.objects.filter(id__in=subject_ids).order_by('name')
+        subject_names = [s.name for s in subjects]
+    else:
+        subject_names = combination_key.split(' / ')
+
+    combination_name = " / ".join(subject_names)
+    
+    # Find FastSwaps with exactly these subjects
+    from django.db.models import Count
+    fast_swaps = FastSwap.objects.annotate(
+        total_subjects=Count('subjects')
+    ).filter(
+        total_subjects=len(subject_names)
+    )
+    
+    for name in subject_names:
+        fast_swaps = fast_swaps.filter(subjects__name=name)
+        
+    fast_swaps = fast_swaps.select_related(
+        'level', 'current_county', 'current_constituency', 'current_ward', 'most_preferred'
+    ).prefetch_related('acceptable_county', 'subjects').distinct()
+    
+    fs_data = []
+    for fs in fast_swaps:
+        # Extract desired counties
+        desired_counties = []
+        if fs.most_preferred:
+            desired_counties.append(fs.most_preferred.name)
+        for ac in fs.acceptable_county.all():
+            if ac.name not in desired_counties:
+                desired_counties.append(ac.name)
+                
+        fs_data.append({
+            'obj': fs,
+            'desired_counties': desired_counties,
+            'current_county_name': fs.current_county.name if fs.current_county else "N/A"
+        })
+        
+    # Location analytics
+    location_counts = {}
+    for item in fs_data:
+        for county_name in item['desired_counties']:
+            location_counts[county_name] = location_counts.get(county_name, 0) + 1
+            
+    sorted_analytics = sorted(
+        [{'name': name, 'count': count} for name, count in location_counts.items()],
+        key=lambda x: x['count'],
+        reverse=True
+    )
+    
+    # Triangle Swaps
+    potential_triangles = []
+    seen_keys = set()
+    
+    for item in fs_data:
+        fs_triangles = find_triangle_matches_for_fast_swap(item['obj'])
+        for tri in fs_triangles:
+            # tri has entity_b, entity_c, is_complete, missing_from, missing_to
+            # We need to deduplicate
+            # Use tuple of sorted type_id strings for deduplication
+            key_ids = [f"fs_{item['obj'].id}"]
+            key_ids.append(f"{tri['entity_b']['type']}_{tri['entity_b']['obj'].id}")
+            key_ids.append(f"{tri['entity_c']['type']}_{tri['entity_c']['obj'].id}")
+            
+            # Sort IDs to handle permutations of the same triangle
+            sorted_key_ids = tuple(sorted(key_ids))
+            
+            # Use missing_from/to to distinguish paths even if same teachers
+            key = (sorted_key_ids, tri.get('missing_from').id if tri.get('missing_from') else None, tri.get('missing_to').id if tri.get('missing_to') else None)
+            
+            if key not in seen_keys:
+                seen_keys.add(key)
+                potential_triangles.append({
+                    'fast_swap_a': item['obj'],
+                    'entity_b': tri['entity_b'],
+                    'entity_c': tri['entity_c'],
+                    'is_complete': tri['is_complete'],
+                    'missing_from': tri.get('missing_from'),
+                    'missing_to': tri.get('missing_to'),
+                    'combination': combination_name
+                })
+
+    all_counties = Counties.objects.all().order_by('name')
+    
+    context = {
+        'combination_name': combination_name,
+        'fast_swaps': fs_data,
+        'location_analytics': sorted_analytics,
+        'potential_triangles': potential_triangles,
+        'counties': all_counties,
+        'page_title': f'FastSwaps for {combination_name}',
+        'active_tab': 'fast_swap_combinations'
+    }
+    
+    return render(request, 'users/admin_fast_swap_combination_detail.html', context)
 @login_required
 @staff_required(login_url='users:login')
 def admin_unique_locations(request):

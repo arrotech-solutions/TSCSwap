@@ -36,8 +36,9 @@
                         class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         <option value="">Any County</option>
                         {% for county in counties %}
-                        <option value="{{ county.name }}" {% if search_from==county.name %}selected{% endif %}>{{
+                        <option value="{{ county.name }}" {% if search_from == county.name %}selected{% endif %}>{{
                             county.name }}</option>
+
 
                         {% endfor %}
                     </select>
@@ -49,7 +50,7 @@
                         class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         <option value="">Any County</option>
                         {% for county in counties %}
-                        <option value="{{ county.name }}" {% if search_to==county.name %}selected{% endif %}>{{
+                        <option value="{{ county.name }}" {% if search_to == county.name %}selected{% endif %}>{{
                             county.name }}</option>
 
                         {% endfor %}

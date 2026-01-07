@@ -65,12 +65,76 @@
             </div>
             {% endif %}
 
+            <!-- Mutual Swap Analysis -->
+            {% if mutual_matches %}
+            <div class="mb-12">
+                <h2 class="text-xl font-bold text-white mb-6 flex items-center">
+                    <svg class="w-6 h-6 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    Mutual Swap Opportunities
+                </h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    {% for mut in mutual_matches %}
+                    <div class="bg-green-500/10 border border-green-500/30 rounded-xl p-5">
+                        <div class="flex items-center justify-between mb-4">
+                            <div class="text-center flex-1">
+                                <span class="text-[10px] text-gray-400 uppercase block">A: FastSwap</span>
+                                <span class="font-bold text-white">{{ mut.entity_a.names|truncatechars:15 }}</span>
+                                <span class="text-[10px] text-green-300 block">{{ mut.entity_a.current_county.name
+                                    }}</span>
+                            </div>
+                            <svg class="w-5 h-5 text-green-500 mx-2" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+                            <div class="text-center flex-1">
+                                <span class="text-[10px] text-gray-400 uppercase block">B: {{ mut.entity_b.type
+                                    }}</span>
+                                <span class="font-bold text-white">
+                                    {% if mut.entity_b.type == 'user' %}
+                                    {{ mut.entity_b.obj.get_full_name|default:mut.entity_b.obj.email|truncatechars:15 }}
+                                    {% else %}
+                                    {{ mut.entity_b.obj.names|truncatechars:15 }}
+                                    {% endif %}
+                                </span>
+                                <span class="text-[10px] text-green-300 block">
+                                    {% if mut.entity_b.type == 'user' %}
+                                    {{ mut.entity_b.obj.profile.school.ward.constituency.county.name }}
+                                    {% else %}
+                                    {{ mut.entity_b.obj.current_county.name }}
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex justify-center space-x-2 border-t border-green-500/20 pt-3">
+                            <a href="{% url 'home:fast_swap_detail' mut.entity_a.id %}"
+                                class="text-[10px] bg-green-500/20 px-2 py-1 rounded text-green-300 hover:bg-green-500/40">View
+                                A</a>
+                            {% if mut.entity_b.type == 'user' %}
+                            <a href="{% url 'users:admin_edit_user' mut.entity_b.obj.id %}"
+                                class="text-[10px] bg-green-500/20 px-2 py-1 rounded text-green-300 hover:bg-green-500/40">View
+                                B</a>
+                            {% else %}
+                            <a href="{% url 'home:fast_swap_detail' mut.entity_b.obj.id %}"
+                                class="text-[10px] bg-green-500/20 px-2 py-1 rounded text-green-300 hover:bg-green-500/40">View
+                                B</a>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
             <!-- Triangle Swap Analysis -->
             {% if potential_triangles %}
             <div class="mb-12">
                 <h2 class="text-xl font-bold text-white mb-6 flex items-center">
                     <svg class="w-6 h-6 mr-2 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                     </svg>
                     Triangle Swap Analysis
@@ -78,7 +142,7 @@
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {% for tri in potential_triangles %}
                     <div
-                        class="bg-gray-700/20 border {% if tri.is_complete %}border-indigo-500/30{% else %}border-yellow-600/30 shadow-inner{% endif %} rounded-xl p-5 relative overflow-hidden">
+                        class="bg-gray-700/20 border {% if tri.is_complete %}border-green-500/30 bg-green-500/5{% else %}border-yellow-600/30{% endif %} rounded-xl p-5 relative overflow-hidden">
                         <div class="flex items-center justify-between mb-4">
                             <!-- FastSwap A -->
                             <div class="flex-1 text-center">
@@ -88,7 +152,7 @@
                                     }}</span>
                             </div>
 
-                            <svg class="w-4 h-4 text-gray-600 mx-2" fill="none" stroke="currentColor"
+                            <svg class="w-4 h-4 text-gray-600 mx-1" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -114,7 +178,7 @@
                                 </span>
                             </div>
 
-                            <svg class="w-4 h-4 text-gray-600 mx-2" fill="none" stroke="currentColor"
+                            <svg class="w-4 h-4 text-gray-600 mx-1" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                     d="M14 5l7 7m0 0l-7 7m7-7H3" />
@@ -122,7 +186,7 @@
 
                             <!-- Entity C or Missing -->
                             <div class="flex-1 text-center">
-                                {% if tri.is_complete %}
+                                {% if tri.entity_c %}
                                 <span class="text-[10px] text-gray-500 uppercase block">C: {{ tri.entity_c.type
                                     }}</span>
                                 <span class="font-bold text-white">
@@ -140,12 +204,9 @@
                                     {% endif %}
                                 </span>
                                 {% else %}
-                                <span
-                                    class="text-[10px] text-red-500 font-black uppercase block tracking-tighter">Missing
-                                    Link</span>
-                                <div class="text-[9px] text-gray-500 leading-none mt-1">
-                                    Need: <span class="text-white font-bold">{{ tri.missing_from.name }}</span><br>
-                                    To: <span class="text-white font-bold">{{ tri.missing_to.name }}</span>
+                                <span class="text-[10px] text-red-500 font-bold uppercase block">Missing Link</span>
+                                <div class="text-[9px] text-gray-500 mt-1">
+                                    Need: <span class="text-white">{{ tri.missing_from.name|default:"?" }}</span>
                                 </div>
                                 {% endif %}
                             </div>
@@ -185,7 +246,8 @@
                                 class="px-2 py-1 bg-green-500/20 text-green-400 text-[10px] rounded uppercase font-bold border border-green-500/30">Complete</span>
                             {% else %}
                             <span
-                                class="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-[10px] rounded uppercase font-bold border border-yellow-500/30">Potential</span>
+                                class="px-2 py-1 bg-yellow-500/20 text-yellow-500 text-[10px] rounded uppercase font-bold border border-yellow-500/30">Missing
+                                Link</span>
                             {% endif %}
                         </div>
                     </div>

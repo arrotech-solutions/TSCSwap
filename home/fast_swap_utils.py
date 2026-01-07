@@ -107,11 +107,12 @@ def find_mutual_matches_for_fast_swap(fs):
         'users': list(matching_users)
     }
 
-def find_triangle_matches_for_fast_swap(fs):
+def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True):
     """
-    Finds triangle matches for a FastSwap instance (A -> B -> C -> A).
-    Entity A = fs.
-    Entity B, C can be FastSwap or MyUser.
+    Finds triangle and mutual matches for a FastSwap instance.
+    - Mutual: A <-> B
+    - Triangle: A -> B -> C -> A
+    - Incomplete: A -> B -> (missing C) or A -> B -> C (C doesn't want A)
     """
     fs_level = fs.level
     fs_county = fs.current_county
@@ -121,132 +122,118 @@ def find_triangle_matches_for_fast_swap(fs):
     is_secondary = 'secondary' in fs_level.name.lower() or 'high' in fs_level.name.lower()
     fs_subjects = get_fs_subjects(fs) if is_secondary else set()
 
-    # Get all potential participants (same level, different id/entity)
-    # Users
-    potential_users = MyUser.objects.filter(
-        is_active=True,
-        profile__level=fs_level,
-        profile__school__ward__constituency__county__isnull=False,
-        swappreference__isnull=False
-    ).select_related(
-        'profile__school__ward__constituency__county',
-        'swappreference__desired_county'
-    ).prefetch_related('swappreference__open_to_all')
-
-    # FastSwaps
-    potential_fs = FastSwap.objects.filter(
+    # Participants pool
+    # The user specifies "we only check against fast swap against fast swap objects"
+    # for this specific analysis context.
+    potential_participants = []
+    
+    # FastSwaps (always included)
+    p_fs_queryset = FastSwap.objects.filter(
         level=fs_level,
         current_county__isnull=False
     ).exclude(id=fs.id).prefetch_related('acceptable_county', 'subjects')
+    
+    for ofs in p_fs_queryset:
+        if not is_secondary or get_fs_subjects(ofs) == fs_subjects:
+            targets = set([ofs.most_preferred.id] if ofs.most_preferred else [])
+            targets.update(ofs.acceptable_county.values_list('id', flat=True))
+            potential_participants.append({
+                'type': 'fastswap',
+                'obj': ofs,
+                'county': ofs.current_county,
+                'targets': targets
+            })
 
-    # Step 1: Find all B that A (fs) wants
-    # fs targets
+    # Users (included only if fast_swap_only is False)
+    if not fast_swap_only:
+        p_u_queryset = MyUser.objects.filter(
+            is_active=True,
+            profile__level=fs_level,
+            profile__school__ward__constituency__county__isnull=False,
+            swappreference__isnull=False
+        ).select_related(
+            'profile__school__ward__constituency__county',
+            'swappreference__desired_county'
+        ).prefetch_related('swappreference__open_to_all')
+        
+        for u in p_u_queryset:
+            if not is_secondary or get_user_subjects(u) == fs_subjects:
+                u_county = get_user_current_county(u)
+                if u_county:
+                    targets = set([u.swappreference.desired_county.id] if u.swappreference.desired_county else [])
+                    targets.update(u.swappreference.open_to_all.values_list('id', flat=True))
+                    potential_participants.append({
+                        'type': 'user',
+                        'obj': u,
+                        'county': u_county,
+                        'targets': targets
+                    })
+
+    # A's targets
     fs_targets = set([fs.most_preferred.id] if fs.most_preferred else [])
     fs_targets.update(fs.acceptable_county.values_list('id', flat=True))
 
-    entities_b = [] # List of (type, object, current_county_id, target_county_ids)
-    
-    # Check users for B
-    for u in potential_users:
-        u_county = get_user_current_county(u)
-        if u_county and u_county.id in fs_targets:
-            if not is_secondary or get_user_subjects(u) == fs_subjects:
-                targets = set([u.swappreference.desired_county.id] if u.swappreference.desired_county else [])
-                targets.update(u.swappreference.open_to_all.values_list('id', flat=True))
-                entities_b.append(('user', u, u_county.id, targets))
-    
-    # Check other FastSwaps for B
-    for ofs in potential_fs:
-        ofs_county = ofs.current_county
-        if ofs_county and ofs_county.id in fs_targets:
-            if not is_secondary or get_fs_subjects(ofs) == fs_subjects:
-                targets = set([ofs.most_preferred.id] if ofs.most_preferred else [])
-                targets.update(ofs.acceptable_county.values_list('id', flat=True))
-                entities_b.append(('fastswap', ofs, ofs_county.id, targets))
+    results = []
+    processed_keys = set()
 
-    triangles = []
-    processed_triplets = set()
+    # 1. Find B that A wants
+    for b in potential_participants:
+        if b['county'].id not in fs_targets:
+            continue
+            
+        # Is it a Mutual Swap? (A -> B, B -> A)
+        if fs_county.id in b['targets']:
+            key = tuple(sorted([f"fs_{fs.id}", f"{b['type']}_{b['obj'].id}"]))
+            if key not in processed_keys:
+                processed_keys.add(key)
+                results.append({
+                    'type': 'mutual',
+                    'entity_b': {'type': b['type'], 'obj': b['obj']},
+                    'is_complete': True
+                })
+            continue # If mutual, we don't necessarily need to show it as a triangle too
 
-    # Step 2: For each B, find C
-    for type_b, obj_b, county_b_id, targets_b in entities_b:
-        found_match_for_b = False
-        
-        # Step 3: Find all C that B wants
-        # First Pass: Try to find a complete triangle (C wants A)
-        for u_c in potential_users:
-            if u_c.id == obj_b.id and type_b == 'user': continue
-            u_c_county = get_user_current_county(u_c)
-            if u_c_county and u_c_county.id in targets_b:
-                if not is_secondary or get_user_subjects(u_c) == fs_subjects:
-                    # Does C want A?
-                    if user_wants_county(u_c, fs_county):
-                        # Found A -> B -> C -> A
-                        triplet = tuple(sorted([f"fs_{fs.id}", f"{type_b}_{obj_b.id}", f"user_{u_c.id}"]))
-                        if triplet not in processed_triplets:
-                            processed_triplets.add(triplet)
-                            triangles.append({
-                                'entity_b': {'type': type_b, 'obj': obj_b},
-                                'entity_c': {'type': 'user', 'obj': u_c},
-                                'is_complete': True
-                            })
-                            found_match_for_b = True
-                            break
-                            
-        if found_match_for_b: continue
-        
-        for fs_c in potential_fs:
-            if fs_c.id == obj_b.id and type_b == 'fastswap': continue
-            fs_c_county = fs_c.current_county
-            if fs_c_county and fs_c_county.id in targets_b:
-                if not is_secondary or get_fs_subjects(fs_c) == fs_subjects:
-                    # Does C want A?
-                    if fs_wants_county(fs_c, fs_county):
-                        # Found A -> B -> C -> A
-                        triplet = tuple(sorted([f"fs_{fs.id}", f"{type_b}_{obj_b.id}", f"fs_{fs_c.id}"]))
-                        if triplet not in processed_triplets:
-                            processed_triplets.add(triplet)
-                            triangles.append({
-                                'entity_b': {'type': type_b, 'obj': obj_b},
-                                'entity_c': {'type': 'fastswap', 'obj': fs_c},
-                                'is_complete': True
-                            })
-                            found_match_for_b = True
-                            break
-
-        if found_match_for_b: continue
-
-        # Second Pass: Find any C that B wants (Incomplete triangle A -> B -> C)
-        for u_c in potential_users:
-            if u_c.id == obj_b.id and type_b == 'user': continue
-            u_c_county = get_user_current_county(u_c)
-            if u_c_county and u_c_county.id in targets_b:
-                if not is_secondary or get_user_subjects(u_c) == fs_subjects:
-                    # A -> B -> C (but C doesn't necessarily want A)
-                    triangles.append({
-                        'entity_b': {'type': type_b, 'obj': obj_b},
-                        'entity_c': {'type': 'user', 'obj': u_c},
-                        'is_complete': False,
-                        'missing_from': u_c_county,
-                        'missing_to': fs_county
+        # 2. Look for C for A -> B -> C
+        found_c = False
+        for c in potential_participants:
+            if c['obj'].id == b['obj'].id and c['type'] == b['type']:
+                continue
+                
+            if c['county'].id in b['targets']:
+                # Chain A -> B -> C exists
+                # Is it a complete triangle? (C -> A)
+                is_complete = fs_county.id in c['targets']
+                
+                key = (tuple(sorted([f"fs_{fs.id}", f"{b['type']}_{b['obj'].id}", f"{c['type']}_{c['obj'].id}"])), is_complete)
+                if key not in processed_keys:
+                    processed_keys.add(key)
+                    results.append({
+                        'type': 'triangle',
+                        'entity_b': {'type': b['type'], 'obj': b['obj']},
+                        'entity_c': {'type': c['type'], 'obj': c['obj']},
+                        'is_complete': is_complete,
+                        'missing_from': c['county'] if not is_complete else None,
+                        'missing_to': fs_county if not is_complete else None
                     })
-                    found_match_for_b = True
-                    break
+                    found_c = True
+                    # We continue to find MORE Cs for this B, up to a reasonable limit?
+                    # For now, let's allow finding multiple Cs.
         
-        if found_match_for_b: continue
-        
-        for fs_c in potential_fs:
-            if fs_c.id == obj_b.id and type_b == 'fastswap': continue
-            fs_c_county = fs_c.current_county
-            if fs_c_county and fs_c_county.id in targets_b:
-                if not is_secondary or get_fs_subjects(fs_c) == fs_subjects:
-                    triangles.append({
-                        'entity_b': {'type': type_b, 'obj': obj_b},
-                        'entity_c': {'type': 'fastswap', 'obj': fs_c},
-                        'is_complete': False,
-                        'missing_from': fs_c_county,
-                        'missing_to': fs_county
-                    })
-                    found_match_for_b = True
-                    break
+        # 3. If no C found in DB, show A -> B -> (Missing C)
+        if not found_c:
+            # For each target of B, if no participant exists there, show one "Missing Link"
+            # To avoid clutter, just show one "Missing Link" representing B's preferences
+            if b['targets']:
+                results.append({
+                    'type': 'triangle',
+                    'entity_b': {'type': b['type'], 'obj': b['obj']},
+                    'entity_c': None,
+                    'is_complete': False,
+                    # Pick the first target as the representative "Missing" one, or show a summary
+                    'missing_from': b['obj'].most_preferred if b['type'] == 'fastswap' and b['obj'].most_preferred else None,
+                    'missing_to': fs_county
+                })
+
+    return results
 
     return triangles

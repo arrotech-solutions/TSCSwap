@@ -2410,37 +2410,66 @@ def admin_fast_swap_combination_detail(request):
         reverse=True
     )
     
-    # Triangle Swaps
+    # Matches Analysis
     potential_triangles = []
-    seen_keys = set()
+    mutual_matches = []
+    seen_tri_keys = set()
+    seen_mut_keys = set()
     
     for item in fs_data:
-        fs_triangles = find_triangle_matches_for_fast_swap(item['obj'])
-        for tri in fs_triangles:
-            # tri has entity_b, entity_c, is_complete, missing_from, missing_to
-            # We need to deduplicate
-            # Use tuple of sorted type_id strings for deduplication
-            key_ids = [f"fs_{item['obj'].id}"]
-            key_ids.append(f"{tri['entity_b']['type']}_{tri['entity_b']['obj'].id}")
-            key_ids.append(f"{tri['entity_c']['type']}_{tri['entity_c']['obj'].id}")
-            
-            # Sort IDs to handle permutations of the same triangle
-            sorted_key_ids = tuple(sorted(key_ids))
-            
-            # Use missing_from/to to distinguish paths even if same teachers
-            key = (sorted_key_ids, tri.get('missing_from').id if tri.get('missing_from') else None, tri.get('missing_to').id if tri.get('missing_to') else None)
-            
-            if key not in seen_keys:
-                seen_keys.add(key)
-                potential_triangles.append({
-                    'fast_swap_a': item['obj'],
-                    'entity_b': tri['entity_b'],
-                    'entity_c': tri['entity_c'],
-                    'is_complete': tri['is_complete'],
-                    'missing_from': tri.get('missing_from'),
-                    'missing_to': tri.get('missing_to'),
-                    'combination': combination_name
-                })
+        # Use fast_swap_only=True to focus on FastSwap-to-FastSwap matches as per user hint
+        # but allow regular users if preferred? The user said "we only check against fast swap against fast swap"
+        matches = find_triangle_matches_for_fast_swap(item['obj'], fast_swap_only=True)
+        
+        for match in matches:
+            if match['type'] == 'mutual':
+                # Mutual Match A <-> B
+                key = tuple(sorted([f"fs_{item['obj'].id}", f"{match['entity_b']['type']}_{match['entity_b']['obj'].id}"]))
+                if key not in seen_mut_keys:
+                    seen_mut_keys.add(key)
+                    mutual_matches.append({
+                        'entity_a': item['obj'],
+                        'entity_b': match['entity_b'],
+                        'is_complete': True,
+                        'combination': combination_name
+                    })
+            else:
+                # Triangle Match A -> B -> C
+                # Deduplicate
+                key_ids = [f"fs_{item['obj'].id}"]
+                key_ids.append(f"{match['entity_b']['type']}_{match['entity_b']['obj'].id}")
+                if match.get('entity_c'):
+                    key_ids.append(f"{match['entity_c']['type']}_{match['entity_c']['obj'].id}")
+                else:
+                    key_ids.append("missing_c")
+                
+                sorted_key_ids = tuple(sorted(key_ids))
+                key = (sorted_key_ids, match.get('missing_from').id if match.get('missing_from') else None, match.get('missing_to').id if match.get('missing_to') else None)
+                
+                if key not in seen_tri_keys:
+                    seen_tri_keys.add(key)
+                    potential_triangles.append({
+                        'fast_swap_a': item['obj'],
+                        'entity_b': match['entity_b'],
+                        'entity_c': match['entity_c'],
+                        'is_complete': match['is_complete'],
+                        'missing_from': match.get('missing_from'),
+                        'missing_to': match.get('missing_to'),
+                        'combination': combination_name
+                    })
+
+    all_counties = Counties.objects.all().order_by('name')
+    
+    context = {
+        'combination_name': combination_name,
+        'fast_swaps': fs_data,
+        'location_analytics': sorted_analytics,
+        'mutual_matches': mutual_matches,
+        'potential_triangles': potential_triangles,
+        'counties': all_counties,
+        'page_title': f'FastSwaps for {combination_name}',
+        'active_tab': 'fast_swap_combinations'
+    }
 
     all_counties = Counties.objects.all().order_by('name')
     

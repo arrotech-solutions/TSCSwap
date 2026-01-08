@@ -8,30 +8,7 @@ class Command(BaseCommand):
         # Dataset containing level names and their respective subjects
         # Format: {'Level Name': ['Subject1', 'Subject2', ...], ...}
         SUBJECTS_DATA = {
-    'Primary School': [
-        # Core
-        'English',
-        'Kiswahili',
-        'Mathematics',
-        'Science',
-        'Social Studies',
-
-        # Religious Education
-        'CRE',
-        'IRE',
-        'HRE',
-
-        # Languages
-        'Indigenous Language',
-        'Arabic',
-
-        # Applied / Creative
-        'Art and Craft',
-        'Music',
-        'Physical Education',
-        'Home Science',
-        'Agriculture'
-    ],
+ 
 
     'Secondary/High School': [
         # Compulsory

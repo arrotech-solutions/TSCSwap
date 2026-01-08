@@ -2085,6 +2085,9 @@ def admin_subject_combination_detail(request):
 
     combination_name = " / ".join(subject_names)
     
+    # Import Counties for triangle detection
+    from home.models import Counties
+    
     # Strict Portfolio Matching: Find teachers whose TOTAL subject count is exactly len(subject_names)
     # and who have all the specified subjects in their portfolio.
     from django.db.models import Count
@@ -2157,6 +2160,11 @@ def admin_subject_combination_detail(request):
         reverse=True
     )
 
+    
+    # Detect Mutual Swaps
+    mutual_matches = []
+    seen_mutual_keys = set()
+    
     # Detect Triangle Swaps (Complete or Potential Chains of 2)
     potential_triangles = []
     
@@ -2166,7 +2174,32 @@ def admin_subject_combination_detail(request):
             return t_item['school'].ward.constituency.county.name
         return None
 
-    # Compare every teacher with every other teacher
+    # First pass: Find mutual swaps
+    for i, teacher_a in enumerate(teacher_data):
+        county_a = get_county_name(teacher_a)
+        if not county_a or not teacher_a['desired_counties']:
+            continue
+
+        for j, teacher_b in enumerate(teacher_data):
+            if i >= j:  # Avoid duplicates
+                continue
+            
+            county_b = get_county_name(teacher_b)
+            if not county_b or not teacher_b['desired_counties']:
+                continue
+
+            # Check if mutual: A wants B's county AND B wants A's county
+            if county_b in teacher_a['desired_counties'] and county_a in teacher_b['desired_counties']:
+                key = tuple(sorted([teacher_a['user'].id, teacher_b['user'].id]))
+                if key not in seen_mutual_keys:
+                    seen_mutual_keys.add(key)
+                    mutual_matches.append({
+                        'teacher_a': teacher_a,
+                        'teacher_b': teacher_b,
+                        'is_complete': True,
+                        'combination': combination_name
+                    })
+
     for i, teacher_a in enumerate(teacher_data):
         county_a = get_county_name(teacher_a)
         if not county_a or not teacher_a['desired_counties']:
@@ -2197,12 +2230,17 @@ def admin_subject_combination_detail(request):
                                 third_person = teacher_c
                                 break
                         
+                        
+                        # Convert county names to County objects for template compatibility
+                        missing_from_obj = Counties.objects.filter(name=wanted_county_z).first() if wanted_county_z else None
+                        missing_to_obj = Counties.objects.filter(name=county_a).first() if county_a else None
+                        
                         potential_triangles.append({
                             'teacher_a': teacher_a,
                             'teacher_b': teacher_b,
                             'teacher_c': third_person, # None if incomplete
-                            'missing_from': wanted_county_z,
-                            'missing_to': county_a,
+                            'missing_from': missing_from_obj,
+                            'missing_to': missing_to_obj,
                             'is_complete': third_person is not None,
                             'combination': combination_name
                         })
@@ -2221,6 +2259,10 @@ def admin_subject_combination_detail(request):
         if key not in seen_ids:
             seen_ids.add(key)
             unique_triangles.append(tri)
+    
+    # Calculate triangle statistics
+    complete_triangles_count = sum(1 for tri in unique_triangles if tri['is_complete'])
+    incomplete_triangles_count = sum(1 for tri in unique_triangles if not tri['is_complete'])
     
     # Weighted Search Logic
     search_from = request.GET.get('from_county', '')
@@ -2268,7 +2310,10 @@ def admin_subject_combination_detail(request):
         'combination_name': combination_name,
         'teachers': teacher_data,
         'location_analytics': sorted_analytics,
+        'mutual_matches': mutual_matches,
         'potential_triangles': unique_triangles,
+        'complete_triangles_count': complete_triangles_count,
+        'incomplete_triangles_count': incomplete_triangles_count,
         'counties': all_counties,
         'search_from': search_from,
         'search_to': search_to,
@@ -2418,7 +2463,7 @@ def admin_fast_swap_combination_detail(request):
     
     for item in fs_data:
         # Enable cross-level matching for admin analysis (level_strict=False)
-        matches = find_triangle_matches_for_fast_swap(item['obj'], fast_swap_only=True, level_strict=False)
+        matches = find_triangle_matches_for_fast_swap(item['obj'], fast_swap_only=True, level_strict=True)
         
         for match in matches:
             if match['type'] == 'mutual':
@@ -2457,6 +2502,11 @@ def admin_fast_swap_combination_detail(request):
                         'combination': combination_name
                     })
 
+    # Calculate statistics
+    mutual_swaps_count = len(mutual_matches)
+    complete_triangles_count = sum(1 for tri in potential_triangles if tri['is_complete'])
+    incomplete_triangles_count = sum(1 for tri in potential_triangles if not tri['is_complete'])
+
     all_counties = Counties.objects.all().order_by('name')
     
     context = {
@@ -2465,18 +2515,9 @@ def admin_fast_swap_combination_detail(request):
         'location_analytics': sorted_analytics,
         'mutual_matches': mutual_matches,
         'potential_triangles': potential_triangles,
-        'counties': all_counties,
-        'page_title': f'FastSwaps for {combination_name}',
-        'active_tab': 'fast_swap_combinations'
-    }
-
-    all_counties = Counties.objects.all().order_by('name')
-    
-    context = {
-        'combination_name': combination_name,
-        'fast_swaps': fs_data,
-        'location_analytics': sorted_analytics,
-        'potential_triangles': potential_triangles,
+        'mutual_swaps_count': mutual_swaps_count,
+        'complete_triangles_count': complete_triangles_count,
+        'incomplete_triangles_count': incomplete_triangles_count,
         'counties': all_counties,
         'page_title': f'FastSwaps for {combination_name}',
         'active_tab': 'fast_swap_combinations'

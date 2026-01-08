@@ -226,13 +226,35 @@ def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True, level_strict=Tr
             # For each target of B, if no participant exists there, show one "Missing Link"
             # To avoid clutter, just show one "Missing Link" representing B's preferences
             if b['targets']:
+                from home.models import Counties
+                
+                missing_from = None
+                
+                # First try most preferred/desired logic
+                if b['type'] == 'fastswap' and b['obj'].most_preferred:
+                    missing_from = b['obj'].most_preferred
+                elif b['type'] == 'user':
+                    try:
+                        if b['obj'].swappreference and b['obj'].swappreference.desired_county:
+                            missing_from = b['obj'].swappreference.desired_county
+                    except:
+                        pass
+                    
+                # Fallback: Pick first one from targets if still None
+                if not missing_from and b['targets']:
+                    try:
+                        target_id = list(b['targets'])[0]
+                        missing_from = Counties.objects.filter(id=target_id).first()
+                    except:
+                        pass
+
                 results.append({
                     'type': 'triangle',
                     'entity_b': {'type': b['type'], 'obj': b['obj']},
                     'entity_c': None,
                     'is_complete': False,
                     # Pick the first target as the representative "Missing" one, or show a summary
-                    'missing_from': b['obj'].most_preferred if b['type'] == 'fastswap' and b['obj'].most_preferred else None,
+                    'missing_from': missing_from,
                     'missing_to': fs_county
                 })
 

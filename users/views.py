@@ -2417,9 +2417,8 @@ def admin_fast_swap_combination_detail(request):
     seen_mut_keys = set()
     
     for item in fs_data:
-        # Use fast_swap_only=True to focus on FastSwap-to-FastSwap matches as per user hint
-        # but allow regular users if preferred? The user said "we only check against fast swap against fast swap"
-        matches = find_triangle_matches_for_fast_swap(item['obj'], fast_swap_only=True)
+        # Enable cross-level matching for admin analysis (level_strict=False)
+        matches = find_triangle_matches_for_fast_swap(item['obj'], fast_swap_only=True, level_strict=False)
         
         for match in matches:
             if match['type'] == 'mutual':

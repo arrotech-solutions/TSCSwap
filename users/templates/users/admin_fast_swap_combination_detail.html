@@ -24,7 +24,7 @@
                         class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-gray-200 text-sm font-medium rounded-lg transition-colors duration-200 flex items-center">
                         <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                d="M10 19l-7-7m0 0l-7 7m-7 7h18" />
                         </svg>
                         Back to List
                     </a>
@@ -82,8 +82,8 @@
                             <div class="text-center flex-1">
                                 <span class="text-[10px] text-gray-400 uppercase block">A: FastSwap</span>
                                 <span class="font-bold text-white">{{ mut.entity_a.names|truncatechars:15 }}</span>
-                                <span class="text-[10px] text-green-300 block">{{ mut.entity_a.current_county.name
-                                    }}</span>
+                                <span class="text-[10px] text-green-300 block">{{
+                                    mut.entity_a.current_county.name|default:"N/A" }}</span>
                             </div>
                             <svg class="w-5 h-5 text-green-500 mx-2" fill="none" stroke="currentColor"
                                 viewBox="0 0 24 24">
@@ -102,9 +102,9 @@
                                 </span>
                                 <span class="text-[10px] text-green-300 block">
                                     {% if mut.entity_b.type == 'user' %}
-                                    {{ mut.entity_b.obj.profile.school.ward.constituency.county.name }}
+                                    {{ mut.entity_b.obj.profile.school.ward.constituency.county.name|default:"N/A" }}
                                     {% else %}
-                                    {{ mut.entity_b.obj.current_county.name }}
+                                    {{ mut.entity_b.obj.current_county.name|default:"N/A" }}
                                     {% endif %}
                                 </span>
                             </div>
@@ -148,8 +148,8 @@
                             <div class="flex-1 text-center">
                                 <span class="text-[10px] text-gray-500 uppercase block">A: FastSwap</span>
                                 <span class="font-bold text-white">{{ tri.fast_swap_a.names|truncatechars:12 }}</span>
-                                <span class="text-[10px] text-indigo-300 block">{{ tri.fast_swap_a.current_county.name
-                                    }}</span>
+                                <span class="text-[10px] text-indigo-300 block">{{
+                                    tri.fast_swap_a.current_county.name|default:"N/A" }}</span>
                             </div>
 
                             <svg class="w-4 h-4 text-gray-600 mx-1" fill="none" stroke="currentColor"
@@ -171,9 +171,9 @@
                                 </span>
                                 <span class="text-[10px] text-indigo-300 block">
                                     {% if tri.entity_b.type == 'user' %}
-                                    {{ tri.entity_b.obj.profile.school.ward.constituency.county.name }}
+                                    {{ tri.entity_b.obj.profile.school.ward.constituency.county.name|default:"N/A" }}
                                     {% else %}
-                                    {{ tri.entity_b.obj.current_county.name }}
+                                    {{ tri.entity_b.obj.current_county.name|default:"N/A" }}
                                     {% endif %}
                                 </span>
                             </div>
@@ -198,9 +198,9 @@
                                 </span>
                                 <span class="text-[10px] text-indigo-300 block">
                                     {% if tri.entity_c.type == 'user' %}
-                                    {{ tri.entity_c.obj.profile.school.ward.constituency.county.name }}
+                                    {{ tri.entity_c.obj.profile.school.ward.constituency.county.name|default:"N/A" }}
                                     {% else %}
-                                    {{ tri.entity_c.obj.current_county.name }}
+                                    {{ tri.entity_c.obj.current_county.name|default:"N/A" }}
                                     {% endif %}
                                 </span>
                                 {% else %}

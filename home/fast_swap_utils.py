@@ -107,7 +107,7 @@ def find_mutual_matches_for_fast_swap(fs):
         'users': list(matching_users)
     }
 
-def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True):
+def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True, level_strict=True):
     """
     Finds triangle and mutual matches for a FastSwap instance.
     - Mutual: A <-> B
@@ -123,15 +123,15 @@ def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True):
     fs_subjects = get_fs_subjects(fs) if is_secondary else set()
 
     # Participants pool
-    # The user specifies "we only check against fast swap against fast swap objects"
-    # for this specific analysis context.
     potential_participants = []
     
-    # FastSwaps (always included)
+    # FastSwaps
     p_fs_queryset = FastSwap.objects.filter(
-        level=fs_level,
         current_county__isnull=False
     ).exclude(id=fs.id).prefetch_related('acceptable_county', 'subjects')
+    
+    if level_strict:
+        p_fs_queryset = p_fs_queryset.filter(level=fs_level)
     
     for ofs in p_fs_queryset:
         if not is_secondary or get_fs_subjects(ofs) == fs_subjects:
@@ -144,11 +144,10 @@ def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True):
                 'targets': targets
             })
 
-    # Users (included only if fast_swap_only is False)
+    # Users
     if not fast_swap_only:
         p_u_queryset = MyUser.objects.filter(
             is_active=True,
-            profile__level=fs_level,
             profile__school__ward__constituency__county__isnull=False,
             swappreference__isnull=False
         ).select_related(
@@ -156,6 +155,9 @@ def find_triangle_matches_for_fast_swap(fs, fast_swap_only=True):
             'swappreference__desired_county'
         ).prefetch_related('swappreference__open_to_all')
         
+        if level_strict:
+            p_u_queryset = p_u_queryset.filter(profile__level=fs_level)
+            
         for u in p_u_queryset:
             if not is_secondary or get_user_subjects(u) == fs_subjects:
                 u_county = get_user_current_county(u)

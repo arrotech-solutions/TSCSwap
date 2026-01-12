@@ -58,6 +58,9 @@ urlpatterns = [
     path("schools/get-wards/", views.get_wards, name="get_wards"),
     path("schools/<int:school_id>/edit/", login_required(views.edit_school), name="edit_school"),
     path("schools/<int:school_id>/delete/", login_required(views.delete_school), name="delete_school"),
+    
+    # Google Forms Integration
+    path("api/google-form-webhook/", views.google_form_webhook, name="google_form_webhook"),
 ]
 
 

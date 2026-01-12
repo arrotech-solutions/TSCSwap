@@ -38,7 +38,7 @@ wheels/
 venv/
 env/
 ENV/
-
+*.json
 # IDE
 .idea/
 .vscode/

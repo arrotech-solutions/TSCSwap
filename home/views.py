@@ -4,12 +4,21 @@ from django.http import HttpResponse, HttpResponseForbidden, JsonResponse
 from django.shortcuts import (HttpResponseRedirect, get_object_or_404,
                               redirect, render)
 from django.urls import reverse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.conf import settings
+import json
+import logging
 
 from .forms import (FastSwapForm, MySubjectForm, SchoolForm, SwapForm,
                     SwapPreferenceForm)
 from .models import (Bookmark, Constituencies, Counties, FastSwap, Level, MySubject,
                      Schools, Subject, SwapPreference, SwapRequests, Swaps,
                      User, Wards)
+from .google_forms_handler import process_google_form_submission
+
+logger = logging.getLogger(__name__)
+
 
 
 def landing_page(request):
@@ -1691,3 +1700,78 @@ def privacy_policy(request):
     """
     return render(request, 'home/privacy_policy.html')
 
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def google_form_webhook(request):
+    """
+    Webhook endpoint to receive Google Forms submissions.
+    Validates authentication token and processes form data to create user accounts.
+    
+    Expected POST data format:
+    {
+        "token": "your-secret-token",
+        "full_name": "John Michael Doe",
+        "phone": "0712345678",
+        "email": "john@example.com",
+        "teacher_level": "Secondary/High School",
+        "school_level": "Secondary/High School",
+        "subjects": [1, 2],  # Subject IDs (optional, for secondary only)
+        "school_name": "Example High School",
+        "current_county": 1,  # County ID
+        "current_constituency": 1,  # Constituency ID
+        "current_ward": 1,  # Ward ID
+        "preferred_counties": [1, 2, 3],  # List of County IDs
+        "most_preferred_county": 1  # County ID
+    }
+    
+    Returns:
+        JSON response with success status and message
+    """
+    try:
+        # Parse JSON data
+        data = json.loads(request.body)
+        
+        # Validate authentication token
+        token = data.get('token', '')
+        expected_token = getattr(settings, 'GOOGLE_FORM_WEBHOOK_TOKEN', None)
+        
+        if not expected_token:
+            logger.error("GOOGLE_FORM_WEBHOOK_TOKEN not configured in settings")
+            return JsonResponse({
+                'success': False,
+                'error': 'Webhook not properly configured'
+            }, status=500)
+        
+        if token != expected_token:
+            logger.warning(f"Invalid webhook token received from {request.META.get('REMOTE_ADDR')}")
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid authentication token'
+            }, status=401)
+        
+        # Remove token from data before processing
+        form_data = {k: v for k, v in data.items() if k != 'token'}
+        
+        # Process the form submission
+        logger.info(f"Processing Google Form submission for email: {form_data.get('email')}")
+        result = process_google_form_submission(form_data)
+        
+        if result['success']:
+            return JsonResponse(result, status=201)
+        else:
+            return JsonResponse(result, status=400)
+            
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in webhook request: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Invalid JSON format'
+        }, status=400)
+        
+    except Exception as e:
+        logger.error(f"Unexpected error in webhook: {str(e)}", exc_info=True)
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error'
+        }, status=500)

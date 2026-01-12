@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to TSCSwap</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .content {
+            background-color: #f9fafb;
+            padding: 30px;
+            border: 1px solid #e5e7eb;
+            border-top: none;
+        }
+
+        .credentials-box {
+            background-color: #fff;
+            border: 2px solid #2563eb;
+            border-radius: 5px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+
+        .credential-item {
+            margin: 10px 0;
+            padding: 10px;
+            background-color: #f3f4f6;
+            border-radius: 3px;
+        }
+
+        .credential-label {
+            font-weight: bold;
+            color: #1f2937;
+        }
+
+        .credential-value {
+            color: #2563eb;
+            font-family: 'Courier New', monospace;
+            font-size: 16px;
+        }
+
+        .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            padding: 12px 30px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .warning {
+            background-color: #fef3c7;
+            border-left: 4px solid #f59e0b;
+            padding: 15px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="header">
+        <h1>Welcome to TSCSwap!</h1>
+    </div>
+
+    <div class="content">
+        <p>Dear {{ user.first_name|default:"Teacher" }},</p>
+
+        <p>Your account has been successfully created on TSCSwap - the platform that helps TSC teachers find and arrange
+            school transfer swaps.</p>
+
+        <div class="credentials-box">
+            <h3 style="margin-top: 0; color: #1f2937;">Your Login Credentials</h3>
+
+            <div class="credential-item">
+                <span class="credential-label">Email:</span><br>
+                <span class="credential-value">{{ email }}</span>
+            </div>
+
+            <div class="credential-item">
+                <span class="credential-label">Password:</span><br>
+                <span class="credential-value">{{ password }}</span>
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Important Security Notice:</strong><br>
+            Your password is currently set to your phone number. For security reasons, we strongly recommend changing
+            your password after your first login.
+        </div>
+
+        <center>
+            <a href="{{ login_url }}/users/login/" class="button">Login to Your Account</a>
+        </center>
+
+        <h3>What's Next?</h3>
+        <ol>
+            <li>Login to your account using the credentials above</li>
+            <li>Complete your profile information</li>
+            <li>Browse available swap opportunities</li>
+            <li>Connect with other teachers looking to swap</li>
+        </ol>
+
+        <h3>Need Help?</h3>
+        <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
+
+        <p>Best regards,<br>
+            <strong>The TSCSwap Team</strong>
+        </p>
+    </div>
+
+    <div class="footer">
+        <p>This is an automated email. Please do not reply to this message.</p>
+        <p>&copy; 2026 TSCSwap. All rights reserved.</p>
+    </div>
+</body>
+
+</html>

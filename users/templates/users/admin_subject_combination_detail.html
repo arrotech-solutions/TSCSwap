@@ -17,10 +17,27 @@
             <h1 class="text-2xl font-bold text-white">{{ combination_name }}</h1>
         </div>
 
-        <div class="bg-gray-700/50 p-4 rounded-lg mb-6 border border-gray-600">
-            <h2 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2">Teachers with this combination
-            </h2>
-            <div class="text-3xl font-bold text-white">{{ teachers|length }}</div>
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            <div class="bg-gray-700/50 p-4 rounded-lg border border-gray-600">
+                <h2 class="text-sm font-medium text-gray-400 uppercase tracking-wider mb-2">Total Teachers</h2>
+                <div class="text-3xl font-bold text-white">{{ teachers|length }}</div>
+            </div>
+
+            <div class="bg-green-900/20 p-4 rounded-lg border border-green-500/50">
+                <h2 class="text-sm font-medium text-green-400 uppercase tracking-wider mb-2">Mutual Swaps</h2>
+                <div class="text-3xl font-bold text-green-400">{{ mutual_matches|length }}</div>
+            </div>
+
+            <div class="bg-blue-900/20 p-4 rounded-lg border border-blue-500/50">
+                <h2 class="text-sm font-medium text-blue-400 uppercase tracking-wider mb-2">Complete Triangles</h2>
+                <div class="text-3xl font-bold text-blue-400">{{ complete_triangles_count|default:0 }}</div>
+            </div>
+
+            <div class="bg-yellow-900/20 p-4 rounded-lg border border-yellow-500/50">
+                <h2 class="text-sm font-medium text-yellow-400 uppercase tracking-wider mb-2">Incomplete Triangles</h2>
+                <div class="text-3xl font-bold text-yellow-400">{{ incomplete_triangles_count|default:0 }}</div>
+            </div>
         </div>
 
         <!-- Search Form -->
@@ -36,8 +53,8 @@
                         class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         <option value="">Any County</option>
                         {% for county in counties %}
-                        <option value="{{ county.name }}" {% if search_from == county.name %}selected{% endif %}>{{
-                            county.name }}</option>
+                        <option value="{{ county.name }}" {% if search_from == county.name %}selected{% endif %}>{{ county.name }}</option>
+
 
 
                         {% endfor %}
@@ -50,8 +67,7 @@
                         class="w-full bg-gray-700 border border-gray-600 text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 p-2.5">
                         <option value="">Any County</option>
                         {% for county in counties %}
-                        <option value="{{ county.name }}" {% if search_to == county.name %}selected{% endif %}>{{
-                            county.name }}</option>
+                        <option value="{{ county.name }}" {% if search_to == county.name %}selected{% endif %}>{{ county.name }}</option>
 
                         {% endfor %}
                     </select>
@@ -94,6 +110,63 @@
                     <div class="text-right">
                         <span class="text-xl font-bold text-white">{{ item.count }}</span>
                         <span class="text-xs text-gray-500 block">teachers</span>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        {% if mutual_matches %}
+        <div class="mb-8">
+            <h3 class="text-lg font-semibold text-white mb-4 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                </svg>
+                Mutual Swap Opportunities
+            </h3>
+            <div class="space-y-4">
+                {% for mutual in mutual_matches %}
+                <div class="bg-gray-700/50 border border-green-500/50 rounded-lg p-5">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                        <div class="flex flex-wrap items-center gap-2">
+                            <!-- Teacher A -->
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-400">Teacher A</span>
+                                <span class="font-medium text-white">{{ mutual.teacher_a.profile.get_full_name|default:mutual.teacher_a.user.email }}</span>
+
+                                <span class="text-xs text-indigo-400">
+                                    {{ mutual.teacher_a.school.ward.constituency.county.name }} →
+                                    {{ mutual.teacher_b.school.ward.constituency.county.name }}</span>
+                            </div>
+
+                            <svg class="w-4 h-4 text-green-500 mx-2" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                            </svg>
+
+                            <!-- Teacher B -->
+                            <div class="flex flex-col">
+                                <span class="text-xs text-gray-400">Teacher B</span>
+                                <span class="font-medium text-white">{{ mutual.teacher_b.profile.get_full_name|default:mutual.teacher_b.user.email }}</span>
+
+                                <span class="text-xs text-indigo-400">
+                                    {{ mutual.teacher_b.school.ward.constituency.county.name }} →
+                                    {{ mutual.teacher_a.school.ward.constituency.county.name }}</span>
+                            </div>
+                        </div>
+
+                        <span
+                            class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-900/50 text-green-400 border border-green-500/50">
+                            <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd"
+                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                    clip-rule="evenodd" />
+                            </svg>
+                            Perfect Match
+                        </span>
                     </div>
                 </div>
                 {% endfor %}
@@ -162,10 +235,21 @@
                             <div class="flex flex-col px-3 py-1 bg-yellow-900/20 border border-yellow-700/50 rounded">
                                 <span class="text-xs text-yellow-500 font-bold uppercase tracking-tighter">Incomplete
                                     Path</span>
-                                <span class="text-xs text-gray-300 italic">Need: <strong>{{ tri.missing_from.name
-                                        }}</strong>
+                                <span class="text-xs text-gray-300 italic">Need: <strong>
+                                        {% if tri.missing_from and tri.missing_from.name %}
+                                        {{ tri.missing_from.name }}
+                                        {% else %}
+                                        ?
+                                        {% endif %}
+                                    </strong>
                                     →
-                                    <strong>{{ tri.missing_to.name }}</strong></span>
+                                    <strong>
+                                        {% if tri.missing_to and tri.missing_to.name %}
+                                        {{ tri.missing_to.name }}
+                                        {% else %}
+                                        ?
+                                        {% endif %}
+                                    </strong></span>
                             </div>
                             {% endif %}
                         </div>

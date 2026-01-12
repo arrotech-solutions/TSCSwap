@@ -1097,6 +1097,11 @@ def fast_swap_detail(request, fastswap_id):
     matches = find_mutual_matches_for_fast_swap(fast_swap)
     triangles = find_triangle_matches_for_fast_swap(fast_swap)
     
+    # Calculate statistics
+    mutual_count = len(matches['fast_swaps']) + len(matches['users'])
+    complete_triangles_count = sum(1 for tri in triangles if tri['is_complete'])
+    incomplete_triangles_count = sum(1 for tri in triangles if not tri['is_complete'])
+    
     context = {
         'fast_swap': fast_swap,
         'display_name': display_name,
@@ -1109,6 +1114,9 @@ def fast_swap_detail(request, fastswap_id):
         'mutual_matches_fs': matches['fast_swaps'],
         'mutual_matches_users': matches['users'],
         'triangle_swaps': triangles,
+        'mutual_count': mutual_count,
+        'complete_triangles_count': complete_triangles_count,
+        'incomplete_triangles_count': incomplete_triangles_count,
     }
     
     return render(request, 'home/fast_swap_detail.html', context)

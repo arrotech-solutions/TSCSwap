@@ -108,4 +108,7 @@ function getCountyId(name) {{
   return map[name] || name;
 }}
 """
-        self.stdout.write(js_code)
+        with open('trigger_script.js', 'w') as f:
+            f.write(js_code)
+        
+        self.stdout.write(self.style.SUCCESS('Successfully wrote script to trigger_script.js'))

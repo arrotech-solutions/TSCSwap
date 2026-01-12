@@ -97,4 +97,7 @@ function createTSCSwapForm() {{
   Logger.log('Form Created! URL: ' + form.getEditUrl());
 }}
 """
-        self.stdout.write(js_code)
+        with open('form_creator.js', 'w') as f:
+            f.write(js_code)
+        
+        self.stdout.write(self.style.SUCCESS('Successfully wrote script to form_creator.js'))
